@@ -1,6 +1,6 @@
 # Software Manager
 
-A PowerShell script that automates backup and restore of applications and their configurations using Chocolatey.
+A PowerShell script that automates backup and restore of applications and their configurations using Windows Package Manager (Winget).
 
 ## Features
 
@@ -15,9 +15,10 @@ A PowerShell script that automates backup and restore of applications and their 
 
 - Windows PowerShell 7 or later
 - Administrator privileges (required)
-- Internet connection (for Chocolatey installation and package downloads)
+- Internet connection (for Winget package downloads)
+- Windows 10 (1903+) or Windows 11 (for native Winget support)
 
-**Note**: Chocolatey will be automatically installed if not present
+**Note**: Windows Package Manager (Winget) is typically pre-installed on modern Windows versions. If missing, the script will attempt to install it automatically.
 
 ## Setup
 
@@ -32,18 +33,24 @@ A PowerShell script that automates backup and restore of applications and their 
 
 ### packages.txt Format
 
+Package names should use Winget package IDs when possible. You can search for packages using `winget search <app-name>`.
+
 ```
 # Regular packages (install only)
-7zip
-googlechrome
-vlc
+7zip.7zip
+Google.Chrome
+VideoLAN.VLC
 
 # Packages with config backup/restore (prefix with +)
-+vscode
-+git
-+discord
-+steam
++Microsoft.VisualStudioCode
++Git.Git
++Discord.Discord
++Valve.Steam
 ```
+
+**Finding Package IDs**: Use `winget search <application-name>` to find the correct package ID. For example:
+- `winget search "Visual Studio Code"` → `Microsoft.VisualStudioCode`
+- `winget search chrome` → `Google.Chrome`
 
 ## Usage
 
@@ -77,6 +84,13 @@ pwsh -ExecutionPolicy Bypass -File "SoftwareManager.ps1"
 
 ### Command Line Mode
 
+**Export currently installed packages:**
+```powershell
+.\SoftwareManager.ps1 -Mode Export
+# or
+PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Export
+```
+
 **Backup configurations:**
 ```powershell
 .\SoftwareManager.ps1 -Mode Backup
@@ -91,7 +105,24 @@ PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Backup
 PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Install
 ```
 
+**Force reinstall all packages (bypass installation checks):**
+```powershell
+.\SoftwareManager.ps1 -Mode Install -Force
+# or
+PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Install -Force
+```
+
 ## How It Works
+
+### Export Mode
+
+1. Scans all currently installed packages using Windows Package Manager (Winget)
+2. Filters out system packages and store apps to focus on user-installed software
+3. Generates `current_packages.txt` with:
+   - Header comments explaining how to use the file
+   - Alphabetically sorted list of package IDs
+   - Instructions for adding "+" prefix for config backup
+4. Provides guidance on next steps for backup workflow
 
 ### Backup Mode
 
@@ -104,13 +135,34 @@ PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Install
 
 ### Install + Restore Mode
 
-1. Automatically installs Chocolatey if not present
-2. Reads `packages.txt` and installs all packages via Chocolatey
+1. Checks for Windows Package Manager (Winget) and attempts to install if missing
+2. Reads `packages.txt` and installs all packages via Winget
 3. For packages marked with "+":
    - Looks for configurations in `.\configs\<package>\` or extracts from `configs.zip`
    - Restores configurations to their original locations
    - Prompts user if configurations are missing
 4. Handles already-installed packages gracefully
+
+## Winget-Specific Features
+
+### Package ID Format
+This version uses proper Winget package IDs which are more reliable than friendly names:
+- Format: `Publisher.ApplicationName` (e.g., `Microsoft.VisualStudioCode`)
+- Use `winget search <app>` to find the correct package ID
+- More reliable installation and detection
+
+### Enhanced Package Detection
+- **Fast Local Detection**: Checks filesystem and Windows registry first (much faster than Winget queries)
+- **Smart Path Detection**: Uses intelligent pattern matching based on package ID structure
+- **Registry-Based Detection**: Scans Windows Programs and Features with flexible search terms
+- **Fallback to Winget**: Only queries Winget if local detection fails
+- **Generic Approach**: Works with any application without hardcoded paths
+
+### Installation Options
+- **Force Installation**: Use `-Force` parameter to reinstall packages even if already installed
+- **Unattended Installation**: Uses `--accept-package-agreements` and `--accept-source-agreements`
+- **Retry Logic**: Implements retry with exact ID matching for failed installations
+- **Silent Mode**: Silent installation for better automation
 5. Logs all operations to `install-log.txt`
 
 ## Supported Applications
@@ -164,7 +216,7 @@ The script handles different types of configuration storage:
 1. **Quick method**: Run `InstallAndLaunchPowerShell.cmd` as Administrator
    - This automatically installs PowerShell 7 and launches the script
 2. **Manual method**: 
-   - Install Chocolatey if not already installed
+   - Install Windows Package Manager (Winget) if not already installed
    - Place script, `packages.txt`, and `configs.zip` in same directory
    - Run `.\SoftwareManager.ps1 -Mode Install` as Administrator
 3. All packages will be installed and configurations restored
@@ -188,10 +240,10 @@ The script handles different types of configuration storage:
 - **Recommended**: Use `InstallAndLaunchPowerShell.cmd` to automatically install PowerShell 7
 - Or manually install PowerShell 7+ from: https://github.com/PowerShell/PowerShell/releases
 
-**"Chocolatey is not installed"**
-- The script automatically installs Chocolatey if not present
-- Requires internet connection for download
-- If automatic installation fails, install manually from https://chocolatey.org/install
+**"Windows Package Manager (Winget) is not installed"**
+- The script automatically attempts to install Winget if not present on older Windows versions
+- On Windows 10 (1903+) and Windows 11, Winget should be pre-installed
+- If automatic installation fails, install manually from Microsoft Store or GitHub releases
 
 **"packages.txt file not found" or "ConfigMappings.ps1 file not found"**
 - Ensure all three files are in the same directory as the script
@@ -220,10 +272,10 @@ To add support for additional applications, edit the `ConfigMappings.ps1` file. 
 
 ### Custom Installation URLs
 
-For packages not available in the Chocolatey repository, you can specify a custom download URL:
+For packages not available in the Winget repository, you can specify a custom download URL:
 
 ```powershell
-'discord' = @{
+'Discord.Discord' = @{
     'Folders' = @()
     'Files' = @(
         "$env:APPDATA\discord\settings.json"
@@ -234,9 +286,9 @@ For packages not available in the Chocolatey repository, you can specify a custo
 ```
 
 **Installation Methods**:
-1. First attempts to use Chocolatey with the custom URL as source
+1. First attempts to use Winget with manifest files (if URL ends with .yaml/.yml)
 2. If that fails, downloads the file directly and runs silent installation
-3. Falls back to standard Chocolatey installation if no URL specified
+3. Falls back to standard Winget installation if no URL specified
 
 **Important**: 
 - Only specify actual configuration files and registry keys that contain user settings

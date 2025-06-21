@@ -1,18 +1,21 @@
 # Configuration Mappings for Software Manager
 # This file defines where each application stores its user settings and configurations
 #
+# IMPORTANT: Package names should match Winget package IDs when possible
+# Use 'winget search <app-name>' to find the correct package ID
+#
 # Structure:
-# 'package-name' = @{
+# 'package-id' = @{
 #     'Folders' = @()     # Entire folders to backup (rarely needed for settings)
 #     'Files' = @()       # Specific configuration files
 #     'Registry' = @()    # Registry keys (use full HKEY_ paths)
-#     'InstallUrl' = ''   # Custom download URL (optional - for packages not in Chocolatey repo)
+#     'InstallUrl' = ''   # Custom download URL (optional - for packages not in Winget repo)
 # }
 #
 # Focus on actual user settings, not installation directories!
 
 $ConfigMappings = @{
-    'filezilla' = @{
+    'FileZilla.FileZilla' = @{
         'Folders' = @()
         'Files' = @(
             "$env:APPDATA\FileZilla\filezilla.xml",      # Main settings
@@ -24,7 +27,7 @@ $ConfigMappings = @{
         'InstallUrl' = ''
     }
     
-    'putty' = @{
+    'PuTTY.PuTTY' = @{
         'Folders' = @()
         'Files' = @()
         'Registry' = @(
@@ -33,25 +36,24 @@ $ConfigMappings = @{
         'InstallUrl' = ''
     }
     
-    'heidisql' = @{
+    'HeidiSQL.HeidiSQL' = @{
         'Folders' = @()
         'Files' = @()
         'Registry' = @(
             "HKEY_CURRENT_USER\Software\HeidiSQL"  # Database connections, GUI preferences, export settings
         )
         'InstallUrl' = ''
-    }
-    
+    }    
     # Example entries for common applications (commented out - uncomment and modify as needed)
     
-    'discord' = @{
+    'Discord.Discord' = @{
         'Folders' = @()
         'Files' = @()
         'Registry' = @()
-        'InstallUrl' = 'https://discord.com/api/downloads/distributions/app/installers/latest?channel=stable&platform=win&arch=x64'
+        'InstallUrl' = ''  # Winget will handle Discord installation
     }
     
-    # 'vscode' = @{
+    # 'Microsoft.VisualStudioCode' = @{
     #     'Folders' = @()
     #     'Files' = @(
     #         "$env:APPDATA\Code\User\settings.json",
@@ -61,7 +63,7 @@ $ConfigMappings = @{
     #     'InstallUrl' = ''
     # }
     
-    # 'git' = @{
+    # 'Git.Git' = @{
     #     'Folders' = @()
     #     'Files' = @(
     #         "$env:USERPROFILE\.gitconfig",
@@ -71,7 +73,7 @@ $ConfigMappings = @{
     #     'InstallUrl' = ''
     # }
     
-    'googlechrome' = @{
+    'Google.Chrome' = @{
         'Folders' = @(
             "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Bookmarks",
             "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Preferences"
