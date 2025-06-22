@@ -1,8 +1,6 @@
 # GUI Dialogs Module for Software Manager
 # Contains complex dialog implementations (package search, config editor, logs)
 
-Add-Type -AssemblyName Microsoft.VisualBasic
-
 function Show-PackageSearchDialog {
     <#
     .SYNOPSIS

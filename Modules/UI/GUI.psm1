@@ -1,10 +1,6 @@
 # GUI Module for Software Manager
 # Contains Windows Forms-based user interface components
 
-# Add required assemblies
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
-
 # Import additional GUI modules
 Import-Module "$PSScriptRoot\GUIControls.psm1" -Force
 Import-Module "$PSScriptRoot\GUIEvents.psm1" -Force
@@ -35,23 +31,27 @@ function New-SoftwareManagerMainForm {
     $form.StartPosition = "CenterScreen"
     $form.MinimumSize = New-Object System.Drawing.Size(800, 600)
     $form.Icon = [System.Drawing.SystemIcons]::Application
-      # Create menu bar
+    $form.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#f7f9fa')
+    $form.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+
+    # Create menu bar
     $menuStrip = New-SoftwareManagerMenuStrip
     $form.Controls.Add($menuStrip)
     $form.MainMenuStrip = $menuStrip
-    
+
     # Create status bar
     $statusBar = New-SoftwareManagerStatusBar
     $form.Controls.Add($statusBar)
-    
+
     # Create main tab control
     $tabControl = New-SoftwareManagerTabControl
     $tabControl.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $tabControl.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $form.Controls.Add($tabControl)
-    
+
     # Load initial data
     Initialize-GUIData
-    
+
     # Set up form event handlers
     $form.add_FormClosing({
         param($sender, $e)
@@ -69,7 +69,7 @@ function New-SoftwareManagerMainForm {
             Stop-CurrentOperation
         }
     })
-    
+
     return $form
 }
 

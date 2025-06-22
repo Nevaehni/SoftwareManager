@@ -17,12 +17,11 @@
 [CmdletBinding()]
 param()
 
-# Add required assemblies for Windows Forms
+# Initialize Windows Forms settings FIRST, before any assemblies or modules
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName Microsoft.VisualBasic
 
-# Initialize Windows Forms settings before any forms are created
 [System.Windows.Forms.Application]::EnableVisualStyles()
 [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
 
