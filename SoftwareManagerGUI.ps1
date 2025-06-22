@@ -20,6 +20,11 @@ param()
 # Add required assemblies for Windows Forms
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName Microsoft.VisualBasic
+
+# Initialize Windows Forms settings before any forms are created
+[System.Windows.Forms.Application]::EnableVisualStyles()
+[System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
 
 # Import all required modules
 $ModulesPath = Join-Path $PSScriptRoot "Modules"
@@ -34,7 +39,9 @@ try {
     Import-Module "$ModulesPath\Modes\InstallMode.psm1" -Force
 }
 catch {
-    [System.Windows.Forms.MessageBox]::Show("Failed to import required modules: $_`n`nPlease ensure all module files are present in the Modules directory.", "Software Manager GUI", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+    Write-Host "Failed to import required modules: $_" -ForegroundColor Red
+    Write-Host "Please ensure all module files are present in the Modules directory." -ForegroundColor Red
+    Read-Host "Press Enter to exit"
     exit 2
 }
 
@@ -116,16 +123,362 @@ function Refresh-ConfigList {
     }
 }
 
+function Show-PackageSearchDialog {
+    <#
+    .SYNOPSIS
+        Shows a dialog to search for and select packages from winget
+    #>
+    
+    $searchForm = New-Object System.Windows.Forms.Form
+    $searchForm.Text = "Search and Add Package"
+    $searchForm.Size = New-Object System.Drawing.Size(700, 500)
+    $searchForm.StartPosition = "CenterParent"
+    $searchForm.MinimumSize = New-Object System.Drawing.Size(600, 400)
+    
+    # Search panel
+    $searchPanel = New-Object System.Windows.Forms.Panel
+    $searchPanel.Height = 60
+    $searchPanel.Dock = [System.Windows.Forms.DockStyle]::Top
+    $searchPanel.Padding = New-Object System.Windows.Forms.Padding(10)
+    
+    $searchLabel = New-Object System.Windows.Forms.Label
+    $searchLabel.Text = "Search for packages:"
+    $searchLabel.Location = New-Object System.Drawing.Point(10, 10)
+    $searchLabel.Size = New-Object System.Drawing.Size(120, 20)
+    
+    $searchTextBox = New-Object System.Windows.Forms.TextBox
+    $searchTextBox.Location = New-Object System.Drawing.Point(10, 35)
+    $searchTextBox.Size = New-Object System.Drawing.Size(400, 20)
+    
+    $searchButton = New-Object System.Windows.Forms.Button
+    $searchButton.Text = "Search"
+    $searchButton.Location = New-Object System.Drawing.Point(420, 33)
+    $searchButton.Size = New-Object System.Drawing.Size(80, 25)
+    
+    $clearButton = New-Object System.Windows.Forms.Button
+    $clearButton.Text = "Clear"
+    $clearButton.Location = New-Object System.Drawing.Point(510, 33)
+    $clearButton.Size = New-Object System.Drawing.Size(60, 25)
+    
+    $searchPanel.Controls.AddRange(@($searchLabel, $searchTextBox, $searchButton, $clearButton))
+    
+    # Results grid
+    $resultsGrid = New-Object System.Windows.Forms.DataGridView
+    $resultsGrid.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $resultsGrid.AllowUserToAddRows = $false
+    $resultsGrid.AllowUserToDeleteRows = $false
+    $resultsGrid.SelectionMode = [System.Windows.Forms.DataGridViewSelectionMode]::FullRowSelect
+    $resultsGrid.MultiSelect = $false
+    $resultsGrid.AutoSizeColumnsMode = [System.Windows.Forms.DataGridViewAutoSizeColumnsMode]::Fill
+    $resultsGrid.ReadOnly = $true
+    
+    # Add columns
+    $idColumn = New-Object System.Windows.Forms.DataGridViewTextBoxColumn
+    $idColumn.Name = "Id"
+    $idColumn.HeaderText = "Package ID"
+    $idColumn.Width = 250
+    
+    $nameColumn = New-Object System.Windows.Forms.DataGridViewTextBoxColumn
+    $nameColumn.Name = "Name"
+    $nameColumn.HeaderText = "Name"
+    $nameColumn.Width = 200
+    
+    $versionColumn = New-Object System.Windows.Forms.DataGridViewTextBoxColumn
+    $versionColumn.Name = "Version"
+    $versionColumn.HeaderText = "Version"
+    $versionColumn.Width = 100
+    
+    $sourceColumn = New-Object System.Windows.Forms.DataGridViewTextBoxColumn
+    $sourceColumn.Name = "Source"
+    $sourceColumn.HeaderText = "Source"
+    $sourceColumn.Width = 80
+    
+    [void]$resultsGrid.Columns.Add($idColumn)
+    [void]$resultsGrid.Columns.Add($nameColumn)
+    [void]$resultsGrid.Columns.Add($versionColumn)
+    [void]$resultsGrid.Columns.Add($sourceColumn)
+    
+    # Status label
+    $statusLabel = New-Object System.Windows.Forms.Label
+    $statusLabel.Text = "Enter a search term and click Search to find packages"
+    $statusLabel.Dock = [System.Windows.Forms.DockStyle]::Bottom
+    $statusLabel.Height = 25
+    $statusLabel.Padding = New-Object System.Windows.Forms.Padding(10, 5, 10, 5)
+    $statusLabel.BackColor = [System.Drawing.SystemColors]::Control
+    
+    # Buttons panel
+    $buttonPanel = New-Object System.Windows.Forms.Panel
+    $buttonPanel.Height = 50
+    $buttonPanel.Dock = [System.Windows.Forms.DockStyle]::Bottom
+    
+    $selectButton = New-Object System.Windows.Forms.Button
+    $selectButton.Text = "Add Selected Package"
+    $selectButton.Location = New-Object System.Drawing.Point(400, 10)
+    $selectButton.Size = New-Object System.Drawing.Size(140, 30)
+    $selectButton.Enabled = $false
+    $selectButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
+    
+    $cancelButton = New-Object System.Windows.Forms.Button
+    $cancelButton.Text = "Cancel"
+    $cancelButton.Location = New-Object System.Drawing.Point(550, 10)
+    $cancelButton.Size = New-Object System.Drawing.Size(80, 30)
+    $cancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+    
+    $manualButton = New-Object System.Windows.Forms.Button
+    $manualButton.Text = "Enter Manually"
+    $manualButton.Location = New-Object System.Drawing.Point(10, 10)
+    $manualButton.Size = New-Object System.Drawing.Size(100, 30)
+    
+    $buttonPanel.Controls.AddRange(@($selectButton, $cancelButton, $manualButton))
+      # Search functionality
+    $searchAction = {
+        if ($searchTextBox.Text.Trim() -eq "") {
+            $statusLabel.Text = "Please enter a search term"
+            return
+        }
+        
+        $statusLabel.Text = "Searching packages..."
+        $searchButton.Enabled = $false
+        $resultsGrid.Rows.Clear()
+        [System.Windows.Forms.Application]::DoEvents()
+        
+        try {
+            $searchTerm = $searchTextBox.Text.Trim()
+            
+            # Use different approach for running winget search
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = "winget.exe"
+            $psi.Arguments = "search `"$searchTerm`" --accept-source-agreements"
+            $psi.UseShellExecute = $false
+            $psi.RedirectStandardOutput = $true
+            $psi.RedirectStandardError = $true
+            $psi.CreateNoWindow = $true
+            
+            $process = New-Object System.Diagnostics.Process
+            $process.StartInfo = $psi
+            $process.Start() | Out-Null
+            
+            $output = $process.StandardOutput.ReadToEnd()
+            $errorOutput = $process.StandardError.ReadToEnd()
+            $process.WaitForExit()
+              if ($process.ExitCode -eq 0 -and $output) {
+                $lines = $output -split "`r?`n" | Where-Object { $_.Trim() -ne "" }
+                
+                # Debug: Write raw output to console for troubleshooting
+                Write-Host "=== RAW WINGET OUTPUT ===" -ForegroundColor Yellow
+                Write-Host $output -ForegroundColor Cyan
+                Write-Host "=== END RAW OUTPUT ===" -ForegroundColor Yellow
+                
+                $foundPackages = 0
+                $inResults = $false
+                $headerFound = $false
+                $namePos = 0
+                $idPos = 0
+                $versionPos = 0
+                $sourcePos = 0
+                
+                foreach ($line in $lines) {
+                    Write-Host "Processing line: '$line'" -ForegroundColor Gray
+                    
+                    # Look for the header line that indicates start of results
+                    if ($line -match "^Name\s+Id\s+Version" -or $line -match "Name.*Id.*Version") {
+                        Write-Host "Found header line" -ForegroundColor Green
+                        
+                        # Capture column positions from header
+                        $namePos = $line.IndexOf("Name")
+                        $idPos = $line.IndexOf("Id")
+                        $versionPos = $line.IndexOf("Version") 
+                        $sourcePos = $line.IndexOf("Source")
+                        
+                        Write-Host "Column positions - Name: $namePos, Id: $idPos, Version: $versionPos, Source: $sourcePos" -ForegroundColor Yellow
+                        
+                        $inResults = $true
+                        $headerFound = $true
+                        continue
+                    }
+                    
+                    # Skip separator lines
+                    if ($line -match "^-+\s+-+\s+-+" -or $line.Trim() -match "^-+$") {
+                        Write-Host "Skipping separator line" -ForegroundColor Gray
+                        continue
+                    }
+                      if ($inResults -and $headerFound -and $line.Trim() -ne "") {
+                        Write-Host "Parsing data line: '$line'" -ForegroundColor White
+                        
+                        try {
+                            # Use a more robust parsing approach
+                            # Remove multiple spaces and split on single spaces, but be smarter about it
+                            $cleanLine = $line -replace '\s+', ' '
+                            $parts = $cleanLine.Trim() -split ' '
+                            
+                            # Winget output typically has: Name [multiple words] | Id | Version | [Match info] | Source
+                            # Look for the pattern where we have something that looks like a package ID
+                            $packageId = ""
+                            $packageName = ""
+                            $packageVersion = ""
+                            $packageSource = "winget"
+                            
+                            # Find the package ID (usually contains dots or is a well-formed identifier)
+                            $idIndex = -1
+                            for ($i = 0; $i -lt $parts.Count; $i++) {
+                                $part = $parts[$i]
+                                # Package IDs typically have dots, are alphanumeric with dashes/underscores, and are not common words
+                                if ($part -match '^[a-zA-Z0-9][a-zA-Z0-9\.\-_]+[a-zA-Z0-9]$' -and 
+                                    $part.Length -gt 3 -and 
+                                    $part -notmatch '^(Name|Id|Version|Match|Source|Tag|Moniker)$' -and
+                                    ($part.Contains('.') -or $part.Length -gt 8)) {
+                                    $packageId = $part
+                                    $idIndex = $i
+                                    break
+                                }
+                            }
+                            
+                            if ($packageId -ne "" -and $idIndex -ge 0) {
+                                # Package name is everything before the ID
+                                if ($idIndex -gt 0) {
+                                    $packageName = ($parts[0..($idIndex-1)] -join ' ').Trim()
+                                }
+                                
+                                # Version is typically the next part after ID
+                                if ($idIndex + 1 -lt $parts.Count) {
+                                    $nextPart = $parts[$idIndex + 1]
+                                    # Check if it looks like a version (contains numbers/dots)
+                                    if ($nextPart -match '^[\d\.\-\w]+$' -and $nextPart -notmatch '^(Tag|Moniker|winget)$') {
+                                        $packageVersion = $nextPart
+                                    }
+                                }
+                                
+                                # Find source (usually "winget" at the end)
+                                $sourceIndex = -1
+                                for ($i = $parts.Count - 1; $i -ge 0; $i--) {
+                                    if ($parts[$i] -eq "winget" -or $parts[$i] -eq "msstore") {
+                                        $packageSource = $parts[$i]
+                                        break
+                                    }
+                                }
+                                
+                                Write-Host "Parsed: Name='$packageName', Id='$packageId', Version='$packageVersion', Source='$packageSource'" -ForegroundColor Green
+                                
+                                # Add to grid if we have at least a valid ID
+                                if ($packageId -ne "") {
+                                    $row = $resultsGrid.Rows.Add()
+                                    $resultsGrid.Rows[$row].Cells[0].Value = $packageId
+                                    $resultsGrid.Rows[$row].Cells[1].Value = if ($packageName) { $packageName } else { $packageId }
+                                    $resultsGrid.Rows[$row].Cells[2].Value = if ($packageVersion) { $packageVersion } else { "Unknown" }
+                                    $resultsGrid.Rows[$row].Cells[3].Value = $packageSource
+                                    $foundPackages++
+                                }
+                            } else {
+                                Write-Host "Could not identify package ID in line: '$line'" -ForegroundColor Yellow
+                            }
+                        }
+                        catch {
+                            Write-Host "Error parsing line: $($_.Message)" -ForegroundColor Red
+                            continue
+                        }
+                    }
+                }
+                
+                if ($foundPackages -eq 0) {
+                    $statusLabel.Text = "No packages found matching '$searchTerm'"
+                } else {
+                    $statusLabel.Text = "Found $foundPackages packages"
+                }
+            }
+            else {
+                $errorMessage = if ($errorOutput) { $errorOutput } else { "No results returned" }
+                $statusLabel.Text = "Search failed: $errorMessage"
+                
+                # If winget is not found, show helpful message
+                if ($process.ExitCode -eq -1 -or $errorOutput -like "*not recognized*") {
+                    $statusLabel.Text = "Winget not found. Please install Windows Package Manager."
+                }
+            }
+        }
+        catch {
+            $statusLabel.Text = "Error during search: $($_.Message)"
+            Write-Host "Search error details: $_" -ForegroundColor Red
+        }
+        finally {
+            $searchButton.Enabled = $true
+        }
+    }
+    
+    # Event handlers
+    $searchButton.add_Click($searchAction)
+    
+    $searchTextBox.add_KeyDown({
+        param($sender, $e)
+        if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+            $searchAction.Invoke()
+        }
+    })
+    
+    $clearButton.add_Click({
+        $searchTextBox.Text = ""
+        $resultsGrid.Rows.Clear()
+        $statusLabel.Text = "Enter a search term and click Search to find packages"
+        $selectButton.Enabled = $false
+    })
+    
+    $resultsGrid.add_SelectionChanged({
+        $selectButton.Enabled = $resultsGrid.SelectedRows.Count -gt 0
+    })
+    
+    $resultsGrid.add_DoubleClick({
+        if ($resultsGrid.SelectedRows.Count -gt 0) {
+            $searchForm.DialogResult = [System.Windows.Forms.DialogResult]::OK
+            $searchForm.Close()
+        }
+    })
+    
+    $manualButton.add_Click({
+        $packageId = [Microsoft.VisualBasic.Interaction]::InputBox("Enter Package ID manually:", "Manual Entry", "")
+        if ($packageId -and $packageId.Trim() -ne "") {
+            $searchForm.Tag = $packageId.Trim()
+            $searchForm.DialogResult = [System.Windows.Forms.DialogResult]::OK
+            $searchForm.Close()
+        }
+    })
+    
+    # Add controls to form
+    $searchForm.Controls.Add($resultsGrid)
+    $searchForm.Controls.Add($searchPanel)
+    $searchForm.Controls.Add($statusLabel)
+    $searchForm.Controls.Add($buttonPanel)
+    
+    $searchForm.AcceptButton = $selectButton
+    $searchForm.CancelButton = $cancelButton
+    
+    # Show dialog and return result
+    $result = $searchForm.ShowDialog()
+    $selectedPackageId = $null
+    
+    if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+        if ($searchForm.Tag) {
+            # Manual entry
+            $selectedPackageId = $searchForm.Tag
+        }
+        elseif ($resultsGrid.SelectedRows.Count -gt 0) {
+            # Selected from grid
+            $selectedPackageId = $resultsGrid.SelectedRows[0].Cells[0].Value
+        }
+    }
+    
+    $searchForm.Dispose()
+    return $selectedPackageId
+}
+
 function Add-NewPackage {
     <#
     .SYNOPSIS
-        Shows dialog to add a new package
+        Shows dialog to add a new package with search functionality
     #>
     
-    $packageId = [Microsoft.VisualBasic.Interaction]::InputBox("Enter Package ID:", "Add Package", "")
+    $selectedPackage = Show-PackageSearchDialog
     
-    if ($packageId -and $packageId.Trim() -ne "") {
-        $packageId = $packageId.Trim()
+    if ($selectedPackage -and $selectedPackage.Trim() -ne "") {
+        $packageId = $selectedPackage.Trim()
         
         # Check if package already exists
         $exists = $script:PackageList | Where-Object { $_.PackageId -eq $packageId }
@@ -313,13 +666,6 @@ function Create-MainForm {
         Creates the main GUI form
     #>
     
-    # Initialize Windows Forms
-    [System.Windows.Forms.Application]::EnableVisualStyles()
-    [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
-    
-    # Add Microsoft.VisualBasic for InputBox
-    Add-Type -AssemblyName Microsoft.VisualBasic
-    
     # Create main form
     $form = New-Object System.Windows.Forms.Form
     $form.Text = "Software Manager v3.0 - GUI Edition"
@@ -343,16 +689,14 @@ function Create-MainForm {
     $packagesToolbar = New-Object System.Windows.Forms.Panel
     $packagesToolbar.Height = 40
     $packagesToolbar.Dock = [System.Windows.Forms.DockStyle]::Top
-    
-    $addPackageBtn = New-Object System.Windows.Forms.Button
-    $addPackageBtn.Text = "Add Package"
+      $addPackageBtn = New-Object System.Windows.Forms.Button
+    $addPackageBtn.Text = "Search & Add Package"
     $addPackageBtn.Location = New-Object System.Drawing.Point(10, 5)
-    $addPackageBtn.Size = New-Object System.Drawing.Size(100, 30)
+    $addPackageBtn.Size = New-Object System.Drawing.Size(140, 30)
     $addPackageBtn.add_Click({ Add-NewPackage })
-    
-    $removePackageBtn = New-Object System.Windows.Forms.Button
+      $removePackageBtn = New-Object System.Windows.Forms.Button
     $removePackageBtn.Text = "Remove Package"
-    $removePackageBtn.Location = New-Object System.Drawing.Point(120, 5)
+    $removePackageBtn.Location = New-Object System.Drawing.Point(160, 5)
     $removePackageBtn.Size = New-Object System.Drawing.Size(120, 30)
     $removePackageBtn.add_Click({ Remove-SelectedPackage })
     
