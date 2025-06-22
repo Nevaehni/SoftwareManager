@@ -118,7 +118,7 @@ PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Install -Fo
 
 1. Scans all currently installed packages using Windows Package Manager (Winget)
 2. Filters out system packages and store apps to focus on user-installed software
-3. Generates `current_packages.txt` with:
+3. Generates `packages_current.txt` with:
    - Header comments explaining how to use the file
    - Alphabetically sorted list of package IDs
    - Instructions for adding "+" prefix for config backup
@@ -195,10 +195,61 @@ The script handles different types of configuration storage:
 
 ## Required Files
 
-- `SoftwareManager.ps1` - Main PowerShell script
+- `SoftwareManager.ps1` - Main PowerShell script (modular version)
+- `Modules/` - Directory containing modular components:
+  - `Core/Common.psm1` - Core functionality and logging
+  - `System/Prerequisites.psm1` - System checks and prerequisites
+  - `Package/PackageManager.psm1` - Package detection and installation
+  - `Config/ConfigManager.psm1` - Configuration backup and restore
+  - `UI/Menu.psm1` - User interface and menu system
+  - `Modes/ExportMode.psm1` - Export functionality
+  - `Modes/BackupMode.psm1` - Backup functionality
+  - `Modes/InstallMode.psm1` - Install and restore functionality
 - `packages.txt` - List of packages to install/backup
 - `ConfigMappings.ps1` - Application configuration location mappings
 - `InstallAndLaunchPowerShell.cmd` - (Optional) PowerShell 7 installer and script launcher
+
+## Architecture
+
+### Modular Structure (v3.0+)
+
+Software Manager now uses a modular architecture for better maintainability:
+
+```
+SoftwareManager/
+├── SoftwareManager.ps1               # Main entry point (modular)
+├── Modules/
+│   ├── Core/
+│   │   └── Common.psm1              # Core utilities, logging, configuration
+│   ├── System/
+│   │   └── Prerequisites.psm1       # System checks, admin rights, Winget
+│   ├── Package/
+│   │   └── PackageManager.psm1      # Package detection and installation
+│   ├── Config/
+│   │   └── ConfigManager.psm1       # Configuration backup/restore
+│   ├── UI/
+│   │   └── Menu.psm1               # User interface and menus
+│   └── Modes/
+│       ├── ExportMode.psm1         # Export installed packages
+│       ├── BackupMode.psm1         # Backup configurations
+│       └── InstallMode.psm1        # Install packages and restore configs
+├── packages.txt                     # Package list
+├── ConfigMappings.ps1              # Application config mappings
+└── configs/                        # Backup configurations directory
+```
+
+**Benefits of Modular Structure:**
+- **Separation of Concerns**: Each module handles a specific responsibility
+- **Maintainability**: Easier to modify and extend individual components
+- **Testability**: Each module can be tested independently
+- **Reusability**: Modules can be used in other scripts
+- **Readability**: Smaller, focused files are easier to understand
+
+### Usage
+
+```powershell
+.\SoftwareManager.ps1 -Mode Export
+```
 
 ## Exit Codes
 
