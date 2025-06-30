@@ -35,7 +35,7 @@ A PowerShell script that automates backup and restore of applications and their 
 
 Package names should use Winget package IDs when possible. You can search for packages using `winget search <app-name>`.
 
-```
+```text
 # Regular packages (install only)
 7zip.7zip
 Google.Chrome
@@ -58,7 +58,7 @@ VideoLAN.VLC
 
 For the easiest setup experience, especially on fresh Windows installations:
 
-```cmd
+```batch
 InstallAndLaunchPowerShell.cmd
 ```
 
@@ -86,29 +86,37 @@ pwsh -ExecutionPolicy Bypass -File "SoftwareManager.ps1"
 
 **Export currently installed packages:**
 ```powershell
+# Standard execution (if execution policy allows)
 .\SoftwareManager.ps1 -Mode Export
-# or
+
+# Alternative execution (bypasses execution policy)
 PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Export
 ```
 
 **Backup configurations:**
 ```powershell
+# Standard execution (if execution policy allows)
 .\SoftwareManager.ps1 -Mode Backup
-# or
+
+# Alternative execution (bypasses execution policy)
 PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Backup
 ```
 
 **Install packages and restore configurations:**
 ```powershell
+# Standard execution (if execution policy allows)
 .\SoftwareManager.ps1 -Mode Install
-# or
+
+# Alternative execution (bypasses execution policy)
 PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Install
 ```
 
 **Force reinstall all packages (bypass installation checks):**
 ```powershell
+# Standard execution with force flag
 .\SoftwareManager.ps1 -Mode Install -Force
-# or
+
+# Alternative execution with force flag
 PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Install -Force
 ```
 
@@ -163,7 +171,7 @@ This version uses proper Winget package IDs which are more reliable than friendl
 - **Unattended Installation**: Uses `--accept-package-agreements` and `--accept-source-agreements`
 - **Retry Logic**: Implements retry with exact ID matching for failed installations
 - **Silent Mode**: Silent installation for better automation
-5. Logs all operations to `install-log.txt`
+6. Logs all operations to `install-log.txt`
 
 ## Supported Applications
 
