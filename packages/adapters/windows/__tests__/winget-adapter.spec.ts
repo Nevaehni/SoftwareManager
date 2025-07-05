@@ -9,10 +9,10 @@ describe('WingetAdapter Unit Tests', () => {
             { "Id": "Microsoft.VisualStudioCode", "Name": "Visual Studio Code", "Version": "1.85.0" }
         ]);
 
-        const execStub = sinon.stub().resolves({ 
-            stdout: mockJson, 
-            stderr: '', 
-            exitCode: 0 
+        const execStub = sinon.stub().resolves({
+            stdout: mockJson,
+            stderr: '',
+            exitCode: 0
         });
 
         const adapter = new WingetAdapter(execStub);
@@ -28,10 +28,10 @@ describe('WingetAdapter Unit Tests', () => {
     });
     it('Winget_install_version', async () => {
         // Red phase: Test that install(version) pins version in command
-        const execStub = sinon.stub().resolves({ 
-            stdout: '', 
-            stderr: '', 
-            exitCode: 0 
+        const execStub = sinon.stub().resolves({
+            stdout: '',
+            stderr: '',
+            exitCode: 0
         });
 
         const adapter = new WingetAdapter(execStub);
@@ -42,10 +42,10 @@ describe('WingetAdapter Unit Tests', () => {
     });
     it('Winget_ensure_absent', async () => {
         // Red phase: Test that ensurePresent() returns false when exit code ≠ 0
-        const execStub = sinon.stub().resolves({ 
-            stdout: '', 
-            stderr: 'Package not found', 
-            exitCode: 1 
+        const execStub = sinon.stub().resolves({
+            stdout: '',
+            stderr: 'Package not found',
+            exitCode: 1
         });
 
         const adapter = new WingetAdapter(execStub);

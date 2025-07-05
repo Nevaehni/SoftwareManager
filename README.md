@@ -336,6 +336,6 @@ Adhering to this document is **non‑negotiable** for v 1.0 and all future rel
 
 ### 🎯 **Sprint Goals**
 
-1. **Current Sprint**: Complete WingetAdapter unit tests (section 7.2)
+1. **Current Sprint**: ✅ Complete WingetAdapter unit tests (section 7.2) - **COMPLETED**
 2. **Next Sprint**: Integration tests with stubbed child processes
 3. **Future**: E2E tests with Playwright + Electron

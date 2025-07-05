@@ -7,10 +7,18 @@ interface WingetPackage {
     Version: string;
 }
 
-export class WingetAdapter implements PackageAdapter {
-    private execFunction: any;
+interface ExecResult {
+    stdout: string;
+    stderr: string;
+    exitCode: number;
+}
 
-    constructor(execFunction?: any) {
+type ExecFunction = (command: string, args: string[]) => Promise<ExecResult>;
+
+export class WingetAdapter implements PackageAdapter {
+    private execFunction?: ExecFunction;
+
+    constructor(execFunction?: ExecFunction) {
         this.execFunction = execFunction;
     }
 
@@ -21,12 +29,10 @@ export class WingetAdapter implements PackageAdapter {
     }
 
     async search(query: string): Promise<WingetPackage[]> {
-        if (!this.execFunction) {
-            throw new Error('Exec function not provided');
-        }
+        this.validateExecFunction();
 
-        const result = await this.execFunction('winget', ['search', query, '--accept-source-agreements']);
-        
+        const result = await this.execFunction!('winget', ['search', query, '--accept-source-agreements']);
+
         if (result.exitCode !== 0) {
             throw new Error(`Winget search failed: ${result.stderr}`);
         }
@@ -36,12 +42,8 @@ export class WingetAdapter implements PackageAdapter {
         } catch (error) {
             throw new Error(`Failed to parse winget search output: ${error}`);
         }
-    }
-
-    async install(packageId: string, version?: string): Promise<boolean> {
-        if (!this.execFunction) {
-            throw new Error('Exec function not provided');
-        }
+    } async install(packageId: string, version?: string): Promise<boolean> {
+        this.validateExecFunction();
 
         const args = ['install', packageId];
         if (version) {
@@ -49,21 +51,25 @@ export class WingetAdapter implements PackageAdapter {
         }
         args.push('--accept-source-agreements');
 
-        const result = await this.execFunction('winget', args);
-        
+        const result = await this.execFunction!('winget', args);
+
         return result.exitCode === 0;
     }
 
     async ensurePresent(packageId: string): Promise<boolean> {
-        if (!this.execFunction) {
-            throw new Error('Exec function not provided');
-        }
+        this.validateExecFunction();
 
         try {
-            const result = await this.execFunction('winget', ['list', packageId, '--accept-source-agreements']);
+            const result = await this.execFunction!('winget', ['list', packageId, '--accept-source-agreements']);
             return result.exitCode === 0;
         } catch (error) {
             return false;
+        }
+    }
+
+    private validateExecFunction(): void {
+        if (!this.execFunction) {
+            throw new Error('Exec function not provided');
         }
     }
 }
