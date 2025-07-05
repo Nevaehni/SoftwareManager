@@ -6,6 +6,7 @@ import { Download, Upload, Package, FolderOpen, Copy, Edit3, FileText, Search, P
 import { FileEditor } from '@/components/FileEditor'
 import { ToastContainer, useToast } from '@/components/ui/toast-container'
 import { SystemInfoModal } from '@/components/SystemInfoModal'
+import { PackageMatchingModal } from '@/components/PackageMatchingModal'
 
 interface OperationLog {
   timestamp: string
@@ -24,6 +25,8 @@ interface InstalledProgram {
   name: string
   version: string
   publisher: string
+  isChocolateyPackage: boolean
+  chocolateyName?: string
 }
 
 interface PackageStats {
@@ -56,8 +59,7 @@ function App() {
   const [selectedTab, setSelectedTab] = useState('backup')
   const [selectedPackageFile, setSelectedPackageFile] = useState<string | null>(null)
   const [selectedConfigFile, setSelectedConfigFile] = useState<string | null>(null)
-  const [editingFile, setEditingFile] = useState<string | null>(null)
-  // Package management state
+  const [editingFile, setEditingFile] = useState<string | null>(null)  // Package management state
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<ChocolateyPackage[]>([])
   const [installedPrograms, setInstalledPrograms] = useState<InstalledProgram[]>([])
@@ -71,6 +73,11 @@ function App() {
   const [includeConfig, setIncludeConfig] = useState(false)
   // Console visibility state
   const [isConsoleVisible, setIsConsoleVisible] = useState(false)
+  // Package matching modal state
+  const [selectedProgramForMatching, setSelectedProgramForMatching] = useState<InstalledProgram | null>(null)
+  const [matchingSearchQuery, setMatchingSearchQuery] = useState('')
+  const [matchingSearchResults, setMatchingSearchResults] = useState<ChocolateyPackage[]>([])
+  const [isMatchingSearching, setIsMatchingSearching] = useState(false)
 
   // Helper function to display file names nicely
   const getDisplayFileName = (filePath: string | null) => {
@@ -393,6 +400,7 @@ function App() {
       addLog(errorMessage, 'error')
     }
   }
+
   const loadInstalledPrograms = async () => {
     if (!window.electronAPI) return
 
@@ -400,6 +408,9 @@ function App() {
     addLog('Loading installed programs...', 'info')
 
     try {
+      // First load Chocolatey packages
+      const chocolateyPackages = await loadInstalledChocolateyPackages()
+
       // Use the new GetInstalledPrograms.ps1 script
       const appPath = await window.electronAPI.getAppPath()
       const scriptPath = `${appPath}\\powershell\\GetInstalledPrograms.ps1`
@@ -411,14 +422,21 @@ function App() {
           const programsData = JSON.parse(result.stdout)
 
           if (programsData.Success && programsData.Programs) {
-            const programList: InstalledProgram[] = programsData.Programs.map((prog: any) => ({
-              name: prog.Name || 'Unknown',
-              version: prog.Version || 'Unknown',
-              publisher: prog.Publisher || 'Unknown'
-            }))
+            const programList: InstalledProgram[] = programsData.Programs.map((prog: any) => {
+              const programName = prog.Name || 'Unknown'
+              const match = matchProgramWithChocolatey(programName, chocolateyPackages)
+
+              return {
+                name: programName,
+                version: prog.Version || 'Unknown',
+                publisher: prog.Publisher || 'Unknown',
+                isChocolateyPackage: !!match,
+                chocolateyName: match?.name
+              }
+            })
 
             setInstalledPrograms(programList.sort((a, b) => a.name.localeCompare(b.name)))
-            addLog(`Loaded ${programList.length} installed programs`, 'success')
+            addLog(`Loaded ${programList.length} installed programs (${programList.filter(p => p.isChocolateyPackage).length} via Chocolatey)`, 'success')
           } else {
             addLog(programsData.Error || 'No programs found', 'warning')
             setInstalledPrograms([])
@@ -441,17 +459,21 @@ function App() {
                 const version = parts[3]?.trim()
 
                 if (name && name !== 'Name') {
+                  const match = matchProgramWithChocolatey(name, chocolateyPackages)
+
                   programList.push({
                     name: name || 'Unknown',
                     version: version || 'Unknown',
-                    publisher: vendor || 'Unknown'
+                    publisher: vendor || 'Unknown',
+                    isChocolateyPackage: !!match,
+                    chocolateyName: match?.name
                   })
                 }
               }
             }
 
             setInstalledPrograms(programList.sort((a, b) => a.name.localeCompare(b.name)))
-            addLog(`Loaded ${programList.length} installed programs (fallback)`, 'success')
+            addLog(`Loaded ${programList.length} installed programs (fallback) (${programList.filter(p => p.isChocolateyPackage).length} via Chocolatey)`, 'success')
           } else {
             addLog('Could not retrieve installed programs', 'warning')
             setInstalledPrograms([])
@@ -523,6 +545,184 @@ function App() {
       setPackageStats(null)
     } finally {
       setIsLoadingStats(false)
+    }
+  }
+
+  // Function to load installed Chocolatey packages
+  const loadInstalledChocolateyPackages = async () => {
+    if (!window.electronAPI) return []
+
+    try {
+      addLog('Loading installed Chocolatey packages...', 'info')
+
+      const result = await window.electronAPI.executePowerShell('choco list --local-only --limit-output', [])
+
+      if (result.success && result.stdout) {
+        const packages: ChocolateyPackage[] = []
+        const lines = result.stdout.split('\n').filter(line => line.trim())
+
+        for (const line of lines) {
+          const parts = line.split('|')
+          if (parts.length >= 2) {
+            packages.push({
+              name: parts[0].trim(),
+              title: parts[0].trim(),
+              summary: 'Installed via Chocolatey',
+              version: parts[1].trim()
+            })
+          }
+        }
+
+        addLog(`Found ${packages.length} installed Chocolatey packages`, 'success')
+        return packages
+      } else {
+        addLog('Could not load Chocolatey packages or Chocolatey not available', 'warning')
+        return []
+      }
+    } catch (error) {
+      addLog(`Error loading Chocolatey packages: ${error}`, 'error')
+      return []
+    }
+  }
+
+  // Function to match program names with Chocolatey packages
+  const matchProgramWithChocolatey = (programName: string, chocolateyPackages: ChocolateyPackage[]) => {
+    const normalizedProgramName = programName.toLowerCase().trim()
+
+    // Try exact match first
+    let match = chocolateyPackages.find(pkg =>
+      pkg.name.toLowerCase() === normalizedProgramName ||
+      pkg.title.toLowerCase() === normalizedProgramName
+    )
+
+    if (match) return match
+
+    // Try partial match (program name contains chocolatey name or vice versa)
+    match = chocolateyPackages.find(pkg => {
+      const pkgName = pkg.name.toLowerCase()
+      const pkgTitle = pkg.title.toLowerCase()
+
+      return normalizedProgramName.includes(pkgName) ||
+        pkgName.includes(normalizedProgramName) ||
+        normalizedProgramName.includes(pkgTitle) ||
+        pkgTitle.includes(normalizedProgramName)
+    })
+
+    return match
+  }
+
+  // Function to search Chocolatey for a specific program
+  const searchChocolateyForProgram = async (programName: string) => {
+    if (!window.electronAPI || !programName.trim()) return
+
+    setIsMatchingSearching(true)
+    setMatchingSearchQuery(programName)
+    addLog(`Searching Chocolatey for: ${programName}`, 'info')
+
+    try {
+      const appPath = await window.electronAPI.getAppPath()
+      const scriptPath = `${appPath}\\powershell\\SearchPackages.ps1`
+
+      const result = await window.electronAPI.executePowerShell(scriptPath, [
+        '-SearchTerm', programName,
+        '-MaxResults', '10'
+      ])
+
+      if (result.success && result.stdout) {
+        try {
+          const searchData = JSON.parse(result.stdout)
+
+          if (searchData.Success && searchData.Packages) {
+            const packages: ChocolateyPackage[] = searchData.Packages.map((pkg: any) => ({
+              name: pkg.Id,
+              title: pkg.Title || pkg.Id,
+              summary: pkg.Summary || 'No description available',
+              version: pkg.Version
+            }))
+
+            setMatchingSearchResults(packages)
+            addLog(`Found ${packages.length} potential matches for ${programName}`, 'success')
+          } else {
+            addLog(searchData.Error || 'No matches found', 'warning')
+            setMatchingSearchResults([])
+          }
+        } catch (parseError) {
+          addLog('Error parsing search results', 'error')
+          setMatchingSearchResults([])
+        }
+      } else {
+        addLog('No matches found or Chocolatey not available', 'warning')
+        setMatchingSearchResults([])
+      }
+    } catch (error) {
+      addLog(`Error searching for program: ${error}`, 'error')
+      setMatchingSearchResults([])
+    } finally {
+      setIsMatchingSearching(false)
+    }
+  }
+
+  // Function to add a Chocolatey package name to packages.txt
+  const addChocolateyPackageToList = async (chocolateyName: string, programName: string) => {
+    if (!selectedPackageFile || !window.electronAPI) {
+      showError('No package file selected', 'Package Addition Failed')
+      return
+    }
+
+    try {
+      showInfo(`Adding ${chocolateyName} to package list...`, 'Processing')
+
+      const appPath = await window.electronAPI.getAppPath()
+      const scriptPath = `${appPath}\\powershell\\AddPackage.ps1`
+
+      const args = [
+        '-PackageName', chocolateyName,
+        '-PackagesFile', selectedPackageFile,
+        '-ValidatePackage'
+      ]
+
+      if (includeConfig) {
+        args.push('-IncludeConfig')
+      }
+
+      const result = await window.electronAPI.executePowerShell(scriptPath, args)
+
+      if (result.success && result.stdout) {
+        try {
+          const addResult = JSON.parse(result.stdout)
+
+          if (addResult.Success) {
+            const configText = addResult.WithConfig ? ' with config backup' : ''
+            const updateText = addResult.Updated ? ' (updated)' : ''
+            const successMessage = `${chocolateyName}${configText} (for ${programName}) has been added${updateText}`
+
+            showSuccess(successMessage, 'Package Added Successfully')
+            addLog(`Added ${chocolateyName} (for ${programName}) to package list${updateText}`, 'success')
+          } else {
+            const errorMessage = addResult.Error || `Failed to add ${chocolateyName}`
+            showError(errorMessage, 'Package Addition Failed')
+            addLog(errorMessage, 'error')
+          }
+        } catch (parseError) {
+          const successMessage = `${includeConfig ? '+' : ''}${chocolateyName} (for ${programName}) has been added to your package list`
+          showSuccess(successMessage, 'Package Added')
+          addLog(successMessage, 'success')
+        }
+      } else {
+        // Fallback to old method
+        const content = await window.electronAPI.readFile(selectedPackageFile)
+        const packageEntry = includeConfig ? `+${chocolateyName}` : chocolateyName
+        const newContent = content + '\n' + packageEntry
+        await window.electronAPI.writeFile(selectedPackageFile, newContent)
+
+        const successMessage = `${packageEntry} (for ${programName}) has been added to your package list`
+        showSuccess(successMessage, 'Package Added')
+        addLog(successMessage, 'success')
+      }
+    } catch (error) {
+      const errorMessage = `Error adding package to list: ${error}`
+      showError(errorMessage, 'Package Addition Failed')
+      addLog(errorMessage, 'error')
     }
   }
 
@@ -858,17 +1058,57 @@ function App() {
                           Load Installed Programs
                         </>
                       )}
-                    </Button>
-
-                    <div className="max-h-96 overflow-y-auto space-y-2">
+                    </Button>                    <div className="max-h-96 overflow-y-auto space-y-2">
                       {installedPrograms.map((program, index) => (
-                        <div key={index} className="p-3 border rounded-lg">
+                        <div key={index} className="p-3 border rounded-lg space-y-2">
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-medium truncate">{program.name}</h4>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium truncate">{program.name}</h4>
+                                {program.isChocolateyPackage ? (
+                                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                    Chocolatey
+                                  </span>
+                                ) : (
+                                  <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">
+                                    System
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-sm text-muted-foreground">v{program.version}</p>
                               <p className="text-xs text-muted-foreground">{program.publisher}</p>
+                              {program.isChocolateyPackage && program.chocolateyName && (
+                                <p className="text-xs text-blue-600 font-mono">{program.chocolateyName}</p>
+                              )}
                             </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            {program.isChocolateyPackage && program.chocolateyName ? (
+                              <Button
+                                size="sm"
+                                onClick={() => addChocolateyPackageToList(program.chocolateyName!, program.name)}
+                                disabled={!selectedPackageFile}
+                                className="flex-1"
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add to List{includeConfig ? ' + Config' : ''}
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedProgramForMatching(program)
+                                  setMatchingSearchQuery(program.name)
+                                  searchChocolateyForProgram(program.name)
+                                }}
+                                className="flex-1"
+                              >
+                                <Search className="h-3 w-3 mr-1" />
+                                Find in Chocolatey
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1078,15 +1318,30 @@ function App() {
         </div>
       </div>
       {/* Toast Notifications */}
-      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
-
-      {/* System Info Modal */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />      {/* System Info Modal */}
       <SystemInfoModal
         open={isSystemInfoModalOpen}
         onClose={() => setIsSystemInfoModalOpen(false)}
         packageStats={packageStats}
         isLoadingStats={isLoadingStats}
         onLoadStats={loadPackageStats}
+      />
+
+      {/* Package Matching Modal */}
+      <PackageMatchingModal
+        open={!!selectedProgramForMatching}
+        onClose={() => {
+          setSelectedProgramForMatching(null)
+          setMatchingSearchResults([])
+          setMatchingSearchQuery('')
+        }}
+        program={selectedProgramForMatching}
+        searchResults={matchingSearchResults}
+        isSearching={isMatchingSearching}
+        searchQuery={matchingSearchQuery}
+        onSearch={searchChocolateyForProgram}
+        onAddToList={addChocolateyPackageToList}
+        includeConfig={includeConfig}
       />
     </div>
   )
