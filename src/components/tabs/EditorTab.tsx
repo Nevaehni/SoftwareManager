@@ -32,7 +32,7 @@ export const EditorTab = ({
                 />
             </div>
         )
-    }    return (
+    } return (
         <div className="flex-1 p-4 overflow-y-auto">
             <div className="h-full flex items-center justify-center">
                 <div className="w-full max-w-2xl space-y-4">

@@ -24,14 +24,14 @@ export const InstalledProgramsCard = ({
 }: InstalledProgramsCardProps) => {
     return (
         <Card className="p-4 h-full flex flex-col">            <CardHeader className="pb-3 flex-shrink-0">
-                <CardTitle className="flex items-center gap-2">
-                    <Monitor className="h-5 w-5" />
-                    Installed Programs
-                </CardTitle>
-                <CardDescription>
-                    View all programs currently installed on this PC
-                </CardDescription>
-            </CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <Monitor className="h-5 w-5" />
+                Installed Programs
+            </CardTitle>
+            <CardDescription>
+                View all programs currently installed on this PC
+            </CardDescription>
+        </CardHeader>
             <CardContent className="flex-1 space-y-3 min-h-0">
                 <Button
                     onClick={onLoadPrograms}

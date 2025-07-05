@@ -28,14 +28,14 @@ export const PackageSearchCard = ({
 }: PackageSearchCardProps) => {
     return (
         <Card className="p-4 h-full flex flex-col">            <CardHeader className="pb-3 flex-shrink-0">
-                <CardTitle className="flex items-center gap-2">
-                    <Search className="h-5 w-5" />
-                    Search Packages
-                </CardTitle>
-                <CardDescription>
-                    Find and add packages to your package list
-                </CardDescription>
-            </CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Search Packages
+            </CardTitle>
+            <CardDescription>
+                Find and add packages to your package list
+            </CardDescription>
+        </CardHeader>
             <CardContent className="flex-1 space-y-3 min-h-0">
                 <div className="flex gap-2">
                     <input
