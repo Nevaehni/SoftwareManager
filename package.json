@@ -1,0 +1,17 @@
+{
+	"devDependencies": {
+		"jest": "^30.0.4",
+		"ts-jest": "^29.4.0",
+		"sinon": "^21.0.0",
+		"typescript": "^5.8.3",
+		"@types/jest": "^30.0.0",
+		"@types/node": "^24.0.10"
+	},
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"test:unit": "jest"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC"
+}
