@@ -191,7 +191,6 @@ function App() {
       addLog(`Error selecting file: ${error}`, 'error')
     }
   }
-
   const editPackageFile = () => {
     if (selectedPackageFile) {
       setEditingFile(selectedPackageFile)
@@ -258,46 +257,118 @@ function App() {
           >
             <Download className="h-4 w-4 mr-2" />
             Install & Restore
-          </Button>
-          <Button
-            onClick={editConfigMappings}
-            variant={editingFile ? 'default' : 'ghost'}
+          </Button>          <Button
+            onClick={() => {
+              setSelectedTab('editor')
+              setEditingFile(null)
+            }}
+            variant={selectedTab === 'editor' ? 'default' : 'ghost'}
             className="w-full justify-start"
           >
             <Edit3 className="h-4 w-4 mr-2" />
-            Config Mappings
-          </Button>
-        </nav>
+            Editor
+          </Button>        </nav>
 
-          {/* File Status in Sidebar */}
-          {selectedPackageFile && (
-            <div className="p-4 mt-auto border-t">
-              <div className="text-xs font-medium text-muted-foreground mb-2">Package List</div>
-              <div className="p-2 bg-background rounded text-xs">
-                <div className="font-medium">{getDisplayFileName(selectedPackageFile)?.fileName}</div>
-                <div className="text-muted-foreground truncate">{getDisplayFileName(selectedPackageFile)?.directory}</div>
+          {/* Files Section in Sidebar */}
+          <div className="p-4 border-t">
+            <div className="text-xs font-medium text-muted-foreground mb-3">Quick Edit</div>
+
+            {/* Package List */}
+            {selectedPackageFile && (
+              <div className="mb-3">
+                <div className="text-xs text-muted-foreground mb-1">Package List</div>
+                <div className="p-2 bg-background rounded text-xs">
+                  <div className="font-medium">{getDisplayFileName(selectedPackageFile)?.fileName}</div>
+                  <div className="text-muted-foreground truncate text-[10px]">{getDisplayFileName(selectedPackageFile)?.directory}</div>
+                </div>
+                <div className="flex gap-1 mt-1">
+                  <Button onClick={editPackageFile} size="sm" variant="outline" className="flex-1 h-7 text-xs">
+                    <Edit3 className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                  <Button onClick={selectPackageFile} size="sm" variant="outline" className="flex-1 h-7 text-xs">
+                    <FolderOpen className="h-3 w-3 mr-1" />
+                    Browse
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-1 mt-2">
-                <Button onClick={editPackageFile} size="sm" variant="outline" className="flex-1">
-                  <Edit3 className="h-3 w-3" />
-                </Button>
-                <Button onClick={selectPackageFile} size="sm" variant="outline" className="flex-1">
-                  <FolderOpen className="h-3 w-3" />
+            )}
+
+            {/* Config Mappings */}
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">Configuration</div>
+              <div className="p-2 bg-background rounded text-xs">
+                <div className="font-medium">ConfigMappings.ps1</div>
+                <div className="text-muted-foreground text-[10px]">PowerShell script</div>
+              </div>
+              <div className="flex gap-1 mt-1">
+                <Button onClick={editConfigMappings} size="sm" variant="outline" className="flex-1 h-7 text-xs">
+                  <Edit3 className="h-3 w-3 mr-1" />
+                  Edit
                 </Button>
               </div>
             </div>
-          )}
+          </div>
         </div>        {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
-          {editingFile ? (
+          {selectedTab === 'editor' ? (
             /* Editor Mode */
-            <div className="flex-1">
-              <FileEditor
-                filePath={editingFile}
-                onLog={addLog}
-                onClose={() => setEditingFile(null)}
-              />
-            </div>
+            editingFile ? (
+              <div className="flex-1">
+                <FileEditor
+                  filePath={editingFile}
+                  onLog={addLog}
+                  onClose={() => setEditingFile(null)}
+                />
+              </div>
+            ) : (
+              /* File Selection */
+              <div className="flex-1 p-8">
+                <div className="max-w-2xl mx-auto space-y-6">
+                  <div className="text-center space-y-2">
+                    <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                      <Edit3 className="h-8 w-8 text-purple-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold">File Editor</h2>
+                    <p className="text-muted-foreground">Select a file to edit</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Card className="p-6 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-200" onClick={editPackageFile}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                            <FileText className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <div className="font-semibold">Package List</div>
+                            <div className="text-sm text-muted-foreground">
+                              {selectedPackageFile ? getDisplayFileName(selectedPackageFile)?.fileName : 'No package file selected'}
+                            </div>
+                          </div>
+                        </div>
+                        <Edit3 className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    </Card>
+
+                    <Card className="p-6 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-purple-200" onClick={editConfigMappings}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
+                            <Edit3 className="h-6 w-6 text-purple-600" />
+                          </div>
+                          <div>
+                            <div className="font-semibold">Configuration Mappings</div>
+                            <div className="text-sm text-muted-foreground">ConfigMappings.ps1</div>
+                          </div>
+                        </div>
+                        <Edit3 className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+              </div>
+            )
           ) : selectedTab === 'backup' ? (
             /* Backup Mode */
             <div className="flex-1 p-8">
