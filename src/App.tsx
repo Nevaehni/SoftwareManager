@@ -210,9 +210,8 @@ function App() {
       addLog(`Could not open ConfigMappings.ps1: ${error}`, 'error')
     }
   }
-
   return (
-    <div className="h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b p-3 flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -233,9 +232,9 @@ function App() {
       </header>
 
       {/* Main Layout */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Left Sidebar Navigation */}
-        <div className="w-64 border-r bg-muted/30 flex flex-col">          <nav className="p-4 space-y-2">
+        <div className="w-64 border-r bg-muted/30 flex flex-col flex-shrink-0">          <nav className="p-4 space-y-2">
           <Button
             onClick={() => {
               setSelectedTab('backup')
@@ -270,7 +269,7 @@ function App() {
           </Button>        </nav>
 
           {/* Files Section in Sidebar */}
-          <div className="p-4 border-t">
+          <div className="p-4 border-t overflow-y-auto">
             <div className="text-xs font-medium text-muted-foreground mb-3">Quick Edit</div>
 
             {/* Package List */}
@@ -310,263 +309,227 @@ function App() {
             </div>
           </div>
         </div>        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
-          {selectedTab === 'editor' ? (
-            /* Editor Mode */
-            editingFile ? (
-              <div className="flex-1">
-                <FileEditor
-                  filePath={editingFile}
-                  onLog={addLog}
-                  onClose={() => setEditingFile(null)}
-                />
-              </div>
-            ) : (
-              /* File Selection */
-              <div className="flex-1 p-8">
-                <div className="max-w-2xl mx-auto space-y-6">
-                  <div className="text-center space-y-2">
-                    <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
-                      <Edit3 className="h-8 w-8 text-purple-600" />
-                    </div>
-                    <h2 className="text-2xl font-bold">File Editor</h2>
-                    <p className="text-muted-foreground">Select a file to edit</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <Card className="p-6 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-200" onClick={editPackageFile}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-                            <FileText className="h-6 w-6 text-blue-600" />
-                          </div>
-                          <div>
-                            <div className="font-semibold">Package List</div>
-                            <div className="text-sm text-muted-foreground">
-                              {selectedPackageFile ? getDisplayFileName(selectedPackageFile)?.fileName : 'No package file selected'}
-                            </div>
-                          </div>
-                        </div>
-                        <Edit3 className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </Card>
-
-                    <Card className="p-6 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-purple-200" onClick={editConfigMappings}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
-                            <Edit3 className="h-6 w-6 text-purple-600" />
-                          </div>
-                          <div>
-                            <div className="font-semibold">Configuration Mappings</div>
-                            <div className="text-sm text-muted-foreground">ConfigMappings.ps1</div>
-                          </div>
-                        </div>
-                        <Edit3 className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </Card>
-                  </div>
-                </div>
-              </div>
-            )
-          ) : selectedTab === 'backup' ? (
-            /* Backup Mode */
-            <div className="flex-1 p-8">
-              <div className="max-w-2xl mx-auto space-y-6">
-                <div className="text-center space-y-2">
-                  <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Upload className="h-8 w-8 text-blue-600" />
-                  </div>
-                  <h2 className="text-2xl font-bold">Backup Configurations</h2>
-                  <p className="text-muted-foreground">Export application settings from this PC</p>
-                </div>
-
-                <Card className="p-6">
-                  <div className="space-y-4">
-                    {!selectedPackageFile ? (
-                      <div className="text-center space-y-4">
-                        <div className="text-muted-foreground">No package file selected</div>
-                        <Button onClick={selectPackageFile} variant="outline" size="lg">
-                          <FolderOpen className="h-4 w-4 mr-2" />
-                          Select Package File
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="text-center text-sm text-muted-foreground">
-                          Package file: <span className="font-medium">{getDisplayFileName(selectedPackageFile)?.fileName}</span>
-                        </div>
-                        <Button
-                          onClick={() => executeOperation('backup')}
-                          disabled={isRunning}
-                          className="w-full"
-                          size="lg"
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          {isRunning ? 'Creating Backup...' : 'Start Backup'}
-                        </Button>
-                      </>
-                    )}
-
-                    <p className="text-sm text-muted-foreground text-center">
-                      This will create a configs.zip file with all backed up configurations
-                    </p>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          ) : selectedTab === 'restore' ? (
-            /* Restore Mode */
-            <div className="flex-1 p-8">
-              <div className="max-w-2xl mx-auto space-y-6">
-                <div className="text-center space-y-2">
-                  <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                    <Download className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h2 className="text-2xl font-bold">Install & Restore</h2>
-                  <p className="text-muted-foreground">Set up a new PC with your applications</p>
-                </div>
-
-                <Card className="p-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Package List File</label>
-                      <div className="flex gap-3">
-                        <div className="flex-1 p-3 bg-muted rounded-lg">
-                          {selectedPackageFile ? (
-                            <div>
-                              <div className="font-medium">{getDisplayFileName(selectedPackageFile)?.fileName}</div>
-                              <div className="text-sm text-muted-foreground">{getDisplayFileName(selectedPackageFile)?.directory}</div>
-                            </div>
-                          ) : (
-                            <div className="text-muted-foreground">No package file selected</div>
-                          )}
-                        </div>
-                        <Button onClick={selectPackageFile} variant="outline">
-                          <FolderOpen className="h-4 w-4 mr-2" />
-                          Select File
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Configuration Archive</label>
-                      <div className="flex gap-3">
-                        <div className="flex-1 p-3 bg-muted rounded-lg">
-                          {selectedConfigFile ? (
-                            <div>
-                              <div className="font-medium">{getDisplayFileName(selectedConfigFile)?.fileName}</div>
-                              <div className="text-sm text-muted-foreground">{getDisplayFileName(selectedConfigFile)?.directory}</div>
-                            </div>
-                          ) : (
-                            <div className="text-muted-foreground">No config archive selected</div>
-                          )}
-                        </div>
-                        <Button onClick={selectConfigFile} variant="outline">
-                          <FolderOpen className="h-4 w-4 mr-2" />
-                          Select Archive
-                        </Button>
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={() => executeOperation('install')}
-                      disabled={isRunning || !selectedPackageFile}
-                      className="w-full"
-                      size="lg"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      {isRunning ? 'Installing & Restoring...' : 'Start Install & Restore'}
-                    </Button>
-
-                    <p className="text-sm text-muted-foreground text-center">
-                      This will install packages via Chocolatey and restore configurations
-                    </p>
-                  </div>
-                </Card>
-              </div>
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">          {selectedTab === 'editor' ? (
+          /* Editor Mode */
+          editingFile ? (
+            <div className="flex-1 min-h-0">
+              <FileEditor
+                filePath={editingFile}
+                onLog={addLog}
+                onClose={() => setEditingFile(null)}
+              />
             </div>
           ) : (
-            /* Home Dashboard */
-            <div className="flex-1 p-8">
-              <div className="max-w-4xl mx-auto space-y-8">                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="p-8 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-200" onClick={() => {
-                  setSelectedTab('backup')
-                  setEditingFile(null)
-                }}>
-                  <div className="text-center space-y-4">
-                    <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Upload className="h-8 w-8 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold">Backup Configurations</h3>
-                      <p className="text-muted-foreground mt-2">
-                        Export application settings from this PC
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card className="p-8 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-green-200" onClick={() => {
-                  setSelectedTab('restore')
-                  setEditingFile(null)
-                }}>
-                  <div className="text-center space-y-4">
-                    <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                      <Download className="h-8 w-8 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold">Install & Restore</h3>
-                      <p className="text-muted-foreground mt-2">
-                        Set up a new PC with your applications
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card className="p-8 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-purple-200" onClick={editConfigMappings}>
-                  <div className="text-center space-y-4">
-                    <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
-                      <Edit3 className="h-8 w-8 text-purple-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold">Edit Configuration</h3>
-                      <p className="text-muted-foreground mt-2">
-                        Modify application config mappings
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
-                {selectedPackageFile && (
-                  <Card className="p-6">
+            /* File Selection */
+            <div className="flex-1 p-8 overflow-y-auto">
+              <div className="max-w-2xl mx-auto space-y-6">
+                <div className="space-y-4">
+                  <Card className="p-6 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-200" onClick={editPackageFile}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
                           <FileText className="h-6 w-6 text-blue-600" />
                         </div>
                         <div>
-                          <div className="font-semibold">{getDisplayFileName(selectedPackageFile)?.fileName}</div>
-                          <div className="text-sm text-muted-foreground">Currently selected package list</div>
+                          <div className="font-semibold">Package List</div>
+                          <div className="text-sm text-muted-foreground">
+                            {selectedPackageFile ? getDisplayFileName(selectedPackageFile)?.fileName : 'No package file selected'}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-3">
-                        <Button onClick={editPackageFile} variant="outline">
-                          <Edit3 className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
-                        <Button onClick={selectPackageFile} variant="outline">
-                          <FolderOpen className="h-4 w-4 mr-2" />
-                          Change
-                        </Button>
-                      </div>
+                      <Edit3 className="h-5 w-5 text-muted-foreground" />
                     </div>
                   </Card>
-                )}
+
+                  <Card className="p-6 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-purple-200" onClick={editConfigMappings}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
+                          <Edit3 className="h-6 w-6 text-purple-600" />
+                        </div>
+                        <div>
+                          <div className="font-semibold">Configuration Mappings</div>
+                          <div className="text-sm text-muted-foreground">ConfigMappings.ps1</div>
+                        </div>
+                      </div>
+                      <Edit3 className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </Card>
+                </div>
               </div>
             </div>
-          )}          {/* Console Panel - always visible */}
+          )
+        ) : selectedTab === 'backup' ? (
+          /* Backup Mode */
+          <div className="flex-1 p-8 overflow-y-auto">
+            <div className="max-w-2xl mx-auto space-y-6">
+              <Card className="p-6">
+                <div className="space-y-4">
+                  {!selectedPackageFile ? (
+                    <div className="text-center space-y-4">
+                      <div className="text-muted-foreground">No package file selected</div>
+                      <Button onClick={selectPackageFile} variant="outline" size="lg">
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        Select Package File
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-center text-sm text-muted-foreground">
+                        Package file: <span className="font-medium">{getDisplayFileName(selectedPackageFile)?.fileName}</span>
+                      </div>
+                      <Button
+                        onClick={() => executeOperation('backup')}
+                        disabled={isRunning}
+                        className="w-full"
+                        size="lg"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {isRunning ? 'Creating Backup...' : 'Start Backup'}
+                      </Button>
+                    </>
+                  )}
+
+                  <p className="text-sm text-muted-foreground text-center">
+                    This will create a configs.zip file with all backed up configurations
+                  </p>
+                </div>
+              </Card>
+            </div>
+          </div>
+        ) : selectedTab === 'restore' ? (
+          /* Restore Mode */
+          <div className="flex-1 p-8 overflow-y-auto">
+            <div className="max-w-2xl mx-auto space-y-6">
+              <Card className="p-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Package List File</label>
+                    <div className="flex gap-3">
+                      <div className="flex-1 p-3 bg-muted rounded-lg">
+                        {selectedPackageFile ? (
+                          <div>
+                            <div className="font-medium">{getDisplayFileName(selectedPackageFile)?.fileName}</div>
+                            <div className="text-sm text-muted-foreground">{getDisplayFileName(selectedPackageFile)?.directory}</div>
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground">No package file selected</div>
+                        )}
+                      </div>
+                      <Button onClick={selectPackageFile} variant="outline">
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        Select File
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Configuration Archive</label>
+                    <div className="flex gap-3">
+                      <div className="flex-1 p-3 bg-muted rounded-lg">
+                        {selectedConfigFile ? (
+                          <div>
+                            <div className="font-medium">{getDisplayFileName(selectedConfigFile)?.fileName}</div>
+                            <div className="text-sm text-muted-foreground">{getDisplayFileName(selectedConfigFile)?.directory}</div>
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground">No config archive selected</div>
+                        )}
+                      </div>
+                      <Button onClick={selectConfigFile} variant="outline">
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        Select Archive
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => executeOperation('install')}
+                    disabled={isRunning || !selectedPackageFile}
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {isRunning ? 'Installing & Restoring...' : 'Start Install & Restore'}
+                  </Button>
+
+                  <p className="text-sm text-muted-foreground text-center">
+                    This will install packages via Chocolatey and restore configurations
+                  </p>
+                </div>
+              </Card>
+            </div>
+          </div>
+        ) : (
+          /* Home Dashboard */
+          <div className="flex-1 p-8 overflow-y-auto">
+            <div className="max-w-4xl mx-auto space-y-8">                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-8 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-200" onClick={() => {
+                setSelectedTab('backup')
+                setEditingFile(null)
+              }}>
+              </Card>
+
+              <Card className="p-8 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-green-200" onClick={() => {
+                setSelectedTab('restore')
+                setEditingFile(null)
+              }}>
+                <div className="text-center space-y-4">
+                  <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                    <Download className="h-8 w-8 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold">Install & Restore</h3>
+                    <p className="text-muted-foreground mt-2">
+                      Set up a new PC with your applications
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-8 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-purple-200" onClick={editConfigMappings}>
+                <div className="text-center space-y-4">
+                  <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Edit3 className="h-8 w-8 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold">Edit Configuration</h3>
+                    <p className="text-muted-foreground mt-2">
+                      Modify application config mappings
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+              {selectedPackageFile && (
+                <Card className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                        <FileText className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="font-semibold">{getDisplayFileName(selectedPackageFile)?.fileName}</div>
+                        <div className="text-sm text-muted-foreground">Currently selected package list</div>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button onClick={editPackageFile} variant="outline">
+                        <Edit3 className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button onClick={selectPackageFile} variant="outline">
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        Change
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}{/* Console Panel - always visible */}
           <div className="h-48 border-t">
             <div className="h-full flex flex-col">
               <div className="p-3 border-b bg-muted/30">
