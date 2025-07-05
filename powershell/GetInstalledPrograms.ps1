@@ -235,13 +235,12 @@ function Format-Output {
         [string]$OutputFormat,
         [string]$SortProperty
     )
-    
-    # Sort programs
+      # Sort programs
     $sortedPrograms = switch ($SortProperty) {
         'Name' { $Programs | Sort-Object Name }
         'Publisher' { $Programs | Sort-Object Publisher, Name }
-        'InstallDate' { $Programs | Sort-Object InstallDate -Descending, Name }
-        'Size' { $Programs | Sort-Object SizeMB -Descending, Name }
+        'InstallDate' { $Programs | Sort-Object @{Expression="InstallDate"; Descending=$true}, Name }
+        'Size' { $Programs | Sort-Object @{Expression="SizeMB"; Descending=$true}, Name }
         default { $Programs | Sort-Object Name }
     }
     
