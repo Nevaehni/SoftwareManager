@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const backup_service_1 = require("../../core/src/backup-service");
 const winget_adapter_1 = require("../../adapters/windows/winget-adapter");
 const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 const sinon = __importStar(require("sinon"));
 describe('Integration Tests - Bundle Creation', () => {
     beforeEach(() => {
@@ -52,8 +53,22 @@ describe('Integration Tests - Bundle Creation', () => {
         if (fs.existsSync('tmp/spec.yaml')) {
             fs.unlinkSync('tmp/spec.yaml');
         }
+        // Clean up any other files in tmp directory
         if (fs.existsSync('tmp')) {
-            fs.rmdirSync('tmp');
+            try {
+                const files = fs.readdirSync('tmp');
+                files.forEach(file => {
+                    const filePath = path.join('tmp', file);
+                    if (fs.statSync(filePath).isFile()) {
+                        fs.unlinkSync(filePath);
+                    }
+                });
+                fs.rmdirSync('tmp');
+            }
+            catch (e) {
+                // Directory not empty or other error, ignore
+                console.warn('Could not clean up tmp directory:', e);
+            }
         }
     });
     it('Bundle_includes_packages', async () => {

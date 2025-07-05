@@ -41,6 +41,7 @@ const path = __importStar(require("path"));
 const backup_service_1 = require("../../core/src/backup-service");
 const restore_service_1 = require("../../core/src/restore-service");
 const winget_adapter_1 = require("../../adapters/windows/winget-adapter");
+const choco_adapter_1 = require("../../adapters/windows/choco-adapter");
 const fs = __importStar(require("fs"));
 const child_process_1 = require("child_process");
 const util_1 = require("util");
@@ -93,7 +94,6 @@ if (require.main === module) {
 }
 // IPC handlers for renderer communication
 function setupIpcHandlers() {
-    // Backup packages
     electron_1.ipcMain.handle('backup-packages', async () => {
         try {
             const execFunction = async (command, args) => {
@@ -104,9 +104,24 @@ function setupIpcHandlers() {
                     exitCode: 0
                 };
             };
-            const adapter = new winget_adapter_1.WingetAdapter(execFunction);
             const settings = await loadSettings();
-            const backupService = new backup_service_1.BackupService(adapter, settings);
+            const backupService = new backup_service_1.BackupService(undefined, settings);
+            // Set up progress reporting
+            backupService.setProgressCallback((progress, message) => {
+                if (mainWindow) {
+                    mainWindow.webContents.send('backup-progress', { progress, message });
+                }
+            });
+            // Add Winget adapter if enabled
+            if (settings.enableWinget !== false) {
+                const wingetAdapter = new winget_adapter_1.WingetAdapter(execFunction);
+                backupService.addAdapter('winget', wingetAdapter);
+            }
+            // Add Chocolatey adapter if enabled
+            if (settings.enableChoco !== false) {
+                const chocoAdapter = new choco_adapter_1.ChocoAdapter(execFunction);
+                backupService.addAdapter('choco', chocoAdapter);
+            }
             await backupService.run();
             return { success: true };
         }
@@ -114,8 +129,7 @@ function setupIpcHandlers() {
             console.error('Backup failed:', error);
             return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
-    });
-    // Restore packages
+    }); // Restore packages
     electron_1.ipcMain.handle('restore-packages', async (event, bundlePath) => {
         try {
             const execFunction = async (command, args) => {
@@ -128,6 +142,12 @@ function setupIpcHandlers() {
             };
             const adapter = new winget_adapter_1.WingetAdapter(execFunction);
             const restoreService = new restore_service_1.RestoreService(adapter);
+            // Set up progress reporting
+            restoreService.setProgressCallback((progress, message) => {
+                if (mainWindow) {
+                    mainWindow.webContents.send('restore-progress', { progress, message });
+                }
+            });
             const result = await restoreService.run(bundlePath);
             return { success: result.success, installed: result.installed, failed: result.failed };
         }
@@ -143,7 +163,7 @@ function setupIpcHandlers() {
         }
         catch (error) {
             console.error('Failed to load settings:', error);
-            return { enableChoco: true }; // Default settings
+            return { enableChoco: true, enableWinget: true }; // Default settings
         }
     });
     // Save settings
@@ -207,7 +227,7 @@ async function loadSettings() {
     catch (error) {
         console.error('Failed to load settings:', error);
     }
-    return { enableChoco: true }; // Default settings
+    return { enableChoco: true, enableWinget: true }; // Default settings
 }
 async function saveSettings(settings) {
     const settingsPath = path.join(electron_1.app.getPath('userData'), 'settings.json');

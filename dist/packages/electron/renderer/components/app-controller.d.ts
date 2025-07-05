@@ -9,6 +9,7 @@ declare global {
             }>;
             getSettings: () => Promise<{
                 enableChoco?: boolean;
+                enableWinget?: boolean;
             }>;
             saveSettings: (settings: any) => Promise<{
                 success: boolean;
@@ -34,5 +35,7 @@ export declare class AppController {
     private handleRestore;
     private loadSettings;
     private handleSaveSettings;
+    private setupProgressListeners;
+    private updateProgress;
 }
 //# sourceMappingURL=app-controller.d.ts.map

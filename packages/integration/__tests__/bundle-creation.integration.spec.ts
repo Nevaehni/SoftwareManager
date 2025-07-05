@@ -1,6 +1,7 @@
 import { BackupService } from '../../core/src/backup-service';
 import { WingetAdapter } from '../../adapters/windows/winget-adapter';
 import * as fs from 'fs';
+import * as path from 'path';
 import * as sinon from 'sinon';
 
 describe('Integration Tests - Bundle Creation', () => {
@@ -12,15 +13,26 @@ describe('Integration Tests - Bundle Creation', () => {
         if (fs.existsSync('tmp')) {
             fs.rmdirSync('tmp');
         }
-    });
-
-    afterEach(() => {
+    }); afterEach(() => {
         // Clean up after tests
         if (fs.existsSync('tmp/spec.yaml')) {
             fs.unlinkSync('tmp/spec.yaml');
         }
+        // Clean up any other files in tmp directory
         if (fs.existsSync('tmp')) {
-            fs.rmdirSync('tmp');
+            try {
+                const files = fs.readdirSync('tmp');
+                files.forEach(file => {
+                    const filePath = path.join('tmp', file);
+                    if (fs.statSync(filePath).isFile()) {
+                        fs.unlinkSync(filePath);
+                    }
+                });
+                fs.rmdirSync('tmp');
+            } catch (e) {
+                // Directory not empty or other error, ignore
+                console.warn('Could not clean up tmp directory:', e);
+            }
         }
     });
 

@@ -1,0 +1,7 @@
+packages:
+  - id: Git.Git
+    name: Git
+    version: 2.42.0
+  - id: Microsoft.VisualStudioCode
+    name: Visual Studio Code
+    version: 1.85.0

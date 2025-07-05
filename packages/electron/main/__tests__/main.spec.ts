@@ -66,14 +66,12 @@ import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
 
 describe('Electron Main Process', () => {
-    let mainWindow: BrowserWindow | null = null;
-
-    afterEach(() => {
+    let mainWindow: BrowserWindow | null = null; afterEach(() => {
         if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.close();
             mainWindow = null;
         }
-        jest.resetModules();
+        jest.clearAllMocks(); // Clear mock call history but keep implementations
     }); test('Main_window_creates_successfully', () => {
         // Red phase: Test that main window can be created
         const { createMainWindow } = require('../main-simple');

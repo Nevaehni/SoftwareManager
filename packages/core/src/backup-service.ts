@@ -2,35 +2,107 @@ import * as fs from 'fs';
 import { PackageAdapter } from './package-adapter';
 import { Settings } from './settings';
 
+interface AdapterConfig {
+    name: string;
+    adapter: PackageAdapter;
+    enabled: boolean;
+}
+
+// Progress reporting interface
+interface ProgressCallback {
+    (progress: number, message: string): void;
+}
+
 export class BackupService {
-    private adapter?: PackageAdapter;
+    private adapters: AdapterConfig[] = [];
     private settings?: Settings;
+    private progressCallback?: ProgressCallback;
 
     constructor(adapter?: PackageAdapter, settings?: Settings) {
-        this.adapter = adapter;
+        // Maintain backward compatibility
+        if (adapter) {
+            this.adapters.push({
+                name: 'winget',
+                adapter,
+                enabled: true
+            });
+        }
         this.settings = settings;
+    }
+
+    setProgressCallback(callback: ProgressCallback): void {
+        this.progressCallback = callback;
+    }
+
+    addAdapter(name: string, adapter: PackageAdapter): void {
+        this.adapters.push({
+            name,
+            adapter,
+            enabled: this.isAdapterEnabled(name)
+        });
     } async run(): Promise<void> {
         if (!fs.existsSync('tmp')) {
-            fs.mkdirSync('tmp');
+            fs.mkdirSync('tmp', { recursive: true });
         }
-        fs.writeFileSync('tmp/spec.yaml', '');
 
-        if (this.adapter && this.shouldExport()) {
-            await this.adapter.exportList('tmp/spec.yaml');
+        this.progressCallback?.(0, 'Starting backup...');
+
+        // Create combined backup with packages from all enabled adapters
+        let combinedPackages: string[] = [];
+        const enabledAdapters = this.adapters.filter(config => config.enabled);
+
+        for (let i = 0; i < enabledAdapters.length; i++) {
+            const config = enabledAdapters[i];
+            const progress = Math.round((i / enabledAdapters.length) * 80); // Reserve 20% for final steps
+
+            this.progressCallback?.(progress, `Exporting ${config.name} packages...`);
+
+            const tempFile = `tmp/${config.name}-packages.yaml`;
+            try {
+                await config.adapter.exportList(tempFile);
+
+                // Read the generated file and extract packages
+                if (fs.existsSync(tempFile)) {
+                    const content = fs.readFileSync(tempFile, 'utf8');
+                    combinedPackages.push(`# ${config.name.toUpperCase()} packages`);
+                    combinedPackages.push(content);
+                    combinedPackages.push(''); // Add empty line between sections
+
+                    // Clean up temp file
+                    fs.unlinkSync(tempFile);
+                }
+            } catch (error) {
+                console.warn(`Failed to export from ${config.name}:`, error);
+            }
+        }
+
+        this.progressCallback?.(90, 'Finalizing backup...');
+
+        // Write combined output
+        const finalContent = combinedPackages.join('\n');
+        fs.writeFileSync('tmp/spec.yaml', finalContent || '');
+
+        this.progressCallback?.(100, 'Backup completed successfully!');
+    }
+
+    private isAdapterEnabled(adapterName: string): boolean {
+        if (!this.settings) {
+            return true; // Default to enabled if no settings
+        }
+
+        switch (adapterName.toLowerCase()) {
+            case 'choco':
+            case 'chocolatey':
+                return this.settings.enableChoco !== false;
+            case 'winget':
+                return this.settings.enableWinget !== false;
+            default:
+                return true; // Unknown adapters default to enabled
         }
     }
 
     private shouldExport(): boolean {
-        // If no settings, allow export by default
-        if (!this.settings) {
-            return true;
-        }
-
-        // If choco is explicitly disabled, skip export
-        if (this.settings.enableChoco === false) {
-            return false;
-        }
-
-        return true;
+        // Legacy method for backward compatibility
+        return this.isAdapterEnabled('winget');
     }
 }

@@ -1,4 +1,7 @@
 import { PackageAdapter } from './package-adapter';
+interface ProgressCallback {
+    (progress: number, message: string): void;
+}
 interface Package {
     id: string;
     name: string;
@@ -15,7 +18,9 @@ interface RestoreResult {
 }
 export declare class RestoreService {
     private adapter;
+    private progressCallback?;
     constructor(adapter: PackageAdapter);
+    setProgressCallback(callback: ProgressCallback): void;
     readBundle(filename: string): Promise<Package[]>;
     installPackages(packages: Package[]): Promise<InstallResult[]>;
     run(bundleFilename: string): Promise<RestoreResult>;

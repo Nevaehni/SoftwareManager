@@ -65,7 +65,7 @@ describe('Electron Main Process', () => {
             mainWindow.close();
             mainWindow = null;
         }
-        jest.resetModules();
+        jest.clearAllMocks(); // Clear mock call history but keep implementations
     });
     test('Main_window_creates_successfully', () => {
         // Red phase: Test that main window can be created

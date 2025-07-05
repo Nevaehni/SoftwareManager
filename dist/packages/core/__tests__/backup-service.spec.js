@@ -50,7 +50,7 @@ describe('BackupService', () => {
         const backupService = new backup_service_1.BackupService(mockAdapter);
         await backupService.run();
         expect(mockAdapter.exportList.calledOnce).toBe(true);
-        expect(mockAdapter.exportList.calledWith('tmp/spec.yaml')).toBe(true);
+        expect(mockAdapter.exportList.calledWith('tmp/winget-packages.yaml')).toBe(true);
     });
     it('BackupService_respectsSettings', async () => {
         // Red phase: test for respecting settings that disable managers
@@ -60,7 +60,38 @@ describe('BackupService', () => {
         const settings = { enableChoco: false };
         const backupService = new backup_service_1.BackupService(mockAdapter, settings);
         await backupService.run();
-        expect(mockAdapter.exportList.called).toBe(false);
+        expect(mockAdapter.exportList.called).toBe(true); // Winget should still be called since only choco is disabled
+    });
+    it('BackupService_multipleAdapters', async () => {
+        // Test for handling multiple adapters
+        const mockWingetAdapter = {
+            exportList: sinon.stub().resolves()
+        };
+        const mockChocoAdapter = {
+            exportList: sinon.stub().resolves()
+        };
+        const backupService = new backup_service_1.BackupService();
+        backupService.addAdapter('winget', mockWingetAdapter);
+        backupService.addAdapter('choco', mockChocoAdapter);
+        await backupService.run();
+        expect(mockWingetAdapter.exportList.calledOnce).toBe(true);
+        expect(mockChocoAdapter.exportList.calledOnce).toBe(true);
+    });
+    it('BackupService_disabledAdapter', async () => {
+        // Test that disabled adapters are not called
+        const mockWingetAdapter = {
+            exportList: sinon.stub().resolves()
+        };
+        const mockChocoAdapter = {
+            exportList: sinon.stub().resolves()
+        };
+        const settings = { enableChoco: false };
+        const backupService = new backup_service_1.BackupService(undefined, settings);
+        backupService.addAdapter('winget', mockWingetAdapter);
+        backupService.addAdapter('choco', mockChocoAdapter);
+        await backupService.run();
+        expect(mockWingetAdapter.exportList.calledOnce).toBe(true);
+        expect(mockChocoAdapter.exportList.called).toBe(false);
     });
 });
 //# sourceMappingURL=backup-service.spec.js.map

@@ -15,7 +15,7 @@
 	},
 	"scripts": {
 		"test": "jest",
-		"test:unit": "jest packages/adapters packages/core --testPathIgnorePatterns=integration",
+		"test:unit": "jest packages/adapters packages/core packages/cli --testPathIgnorePatterns=integration",
 		"test:integration": "jest packages/integration",
 		"test:contract": "jest contract",
 		"test:e2e": "playwright test",
@@ -23,7 +23,8 @@
 		"build": "tsc",
 		"electron": "electron packages/electron/main/main.js",
 		"start": "npm run build && npm run electron",
-		"dev": "tsc --watch"
+		"dev": "tsc --watch",
+		"cli": "node packages/cli/software-manager.js"
 	},
 	"keywords": [],
 	"author": "",

@@ -1,0 +1,4 @@
+packages:
+  - id: chocolatey
+    name: Chocolatey
+    version: 2.2.2
