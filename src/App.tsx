@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { Download, Upload, Package, FolderOpen, Copy, Edit3, FileText, Search, Plus, Monitor } from 'lucide-react'
+import { Download, Upload, Package, FolderOpen, Copy, Edit3, FileText, Search, Plus, Monitor, Eye, EyeOff } from 'lucide-react'
 import { FileEditor } from '@/components/FileEditor'
 import { ToastContainer, useToast } from '@/components/ui/toast-container'
 import { SystemInfoModal } from '@/components/SystemInfoModal'
@@ -66,10 +66,11 @@ function App() {
   const [packageStats, setPackageStats] = useState<PackageStats | null>(null)
   const [isLoadingStats, setIsLoadingStats] = useState(false)
   // Toast notifications
-  const { toasts, removeToast, showSuccess, showError, showInfo } = useToast()
-  // System Info Modal state
+  const { toasts, removeToast, showSuccess, showError, showInfo } = useToast()  // System Info Modal state
   const [isSystemInfoModalOpen, setIsSystemInfoModalOpen] = useState(false)
   const [includeConfig, setIncludeConfig] = useState(false)
+  // Console visibility state
+  const [isConsoleVisible, setIsConsoleVisible] = useState(false)
 
   // Helper function to display file names nicely
   const getDisplayFileName = (filePath: string | null) => {
@@ -860,12 +861,6 @@ function App() {
                     </Button>
 
                     <div className="max-h-96 overflow-y-auto space-y-2">
-                      {installedPrograms.length === 0 && !isLoadingPrograms && (
-                        <div className="text-center py-8 text-muted-foreground">
-                          Click "Load Installed Programs" to view software installed on this PC.
-                        </div>
-                      )}
-
                       {installedPrograms.map((program, index) => (
                         <div key={index} className="p-3 border rounded-lg">
                           <div className="flex items-start justify-between">
@@ -1024,45 +1019,62 @@ function App() {
                 </Card>
               )}
             </div>
-          </div>
-        )}{/* Console Panel - always visible */}
-          <div className="h-48 border-t">
-            <div className="h-full flex flex-col">
-              <div className="p-3 border-b bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium">Console Output</h3>
-                  <div className="flex gap-2">
-                    <Button onClick={copyAllLogs} size="sm" variant="outline" disabled={logs.length === 0}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button onClick={clearLogs} size="sm" variant="outline">
-                      Clear
-                    </Button>
+          </div>)}{/* Console Panel - conditionally visible */}
+          {isConsoleVisible ? (
+            <div className="h-48 border-t">
+              <div className="h-full flex flex-col">
+                <div className="p-3 border-b bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium">Console Output</h3>
+                    <div className="flex gap-2">
+                      <Button onClick={copyAllLogs} size="sm" variant="outline" disabled={logs.length === 0}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button onClick={clearLogs} size="sm" variant="outline">
+                        Clear
+                      </Button>
+                      <Button onClick={() => setIsConsoleVisible(false)} size="sm" variant="outline">
+                        <EyeOff className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
+                <div className="flex-1 bg-slate-900 text-slate-100 p-3 overflow-y-auto font-mono text-sm">
+                  {logs.length === 0 ? (
+                    <div className="text-slate-400 text-center py-8">
+                      Console is ready. Output from operations will appear here.
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {logs.map((log, index) => (
+                        <div
+                          key={index}
+                          className={`${log.type === 'error' ? 'text-red-400' :
+                            log.type === 'success' ? 'text-green-400' :
+                              log.type === 'warning' ? 'text-yellow-400' :
+                                'text-slate-100'
+                            }`}
+                        >
+                          <span className="text-slate-500">[{log.timestamp}]</span> {log.message}
+                        </div>
+                      ))}                    </div>
+                  )}              </div>
               </div>
-              <div className="flex-1 bg-slate-900 text-slate-100 p-3 overflow-y-auto font-mono text-sm">
-                {logs.length === 0 ? (
-                  <div className="text-slate-400 text-center py-8">
-                    Console is ready. Output from operations will appear here.
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {logs.map((log, index) => (
-                      <div
-                        key={index}
-                        className={`${log.type === 'error' ? 'text-red-400' :
-                          log.type === 'success' ? 'text-green-400' :
-                            log.type === 'warning' ? 'text-yellow-400' :
-                              'text-slate-100'
-                          }`}
-                      >
-                        <span className="text-slate-500">[{log.timestamp}]</span> {log.message}
-                      </div>
-                    ))}                    </div>
-                )}              </div>
             </div>
-          </div>
+          ) : (
+            /* Show Console Button - Fixed position in bottom right */
+            <div className="fixed bottom-4 right-4 z-50">
+              <Button
+                onClick={() => setIsConsoleVisible(true)}
+                size="sm"
+                variant="outline"
+                className="bg-background shadow-lg border-2"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Show Console
+              </Button>
+            </div>
+          )}
         </div>
       </div>
       {/* Toast Notifications */}
