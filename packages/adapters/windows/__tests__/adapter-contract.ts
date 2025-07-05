@@ -8,7 +8,7 @@ export function shouldBehaveLikePackageAdapter(factory: () => PackageAdapter) {
         it('exportList creates file with package data', () => {
             const adapter = factory();
             const filename = 'test-output.yaml';
-            
+
             // This test will fail until we implement the adapter properly
             expect(() => adapter.exportList(filename)).not.toThrow();
         });

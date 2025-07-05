@@ -296,3 +296,46 @@ By mandating tests **first**, shared contract suites, and an enforced CI gate, w
 * Produce living documentation that on‑boards new contributors quickly.
 
 Adhering to this document is **non‑negotiable** for v 1.0 and all future releases.
+
+---
+
+## 15 · TDD Progress Tracking
+
+*Last updated: July 6, 2025*
+
+### ✅ **Completed Features**
+
+| Layer | Component | Test ID | Status | Implementation |
+|-------|-----------|---------|--------|----------------|
+| **Unit** | BackupService | `BackupService_createsDirs` | ✅ PASS | Creates `tmp/spec.yaml` |
+| **Unit** | BackupService | `BackupService_callsExport` | ✅ PASS | Delegates to `PackageAdapter.exportList()` |
+| **Unit** | BackupService | `BackupService_respectsSettings` | ✅ PASS | Skips export when `enableChoco: false` |
+| **Contract** | WingetAdapter | `PackageAdapter contract` | ✅ PASS | Implements `exportList()` interface |
+
+### 🔄 **In Progress**
+
+*None currently*
+
+### 📋 **Next Up (Priority Order)**
+
+| Layer | Component | Test ID | Description |
+|-------|-----------|---------|-------------|
+| **Unit** | WingetAdapter | `Winget_search_parses` | Parse JSON output from `winget search` |
+| **Unit** | WingetAdapter | `Winget_install_version` | Pin version in install command |
+| **Unit** | WingetAdapter | `Winget_ensure_absent` | Return false when exit code ≠ 0 |
+| **Integration** | Bundle Creation | `Bundle_includes_packages` | End-to-end backup flow |
+| **E2E** | UI Flow | `backup-restore.spec.ts` | Playwright test for full workflow |
+
+### 📊 **Current Metrics**
+
+- **Test Suites**: 2 passing
+- **Total Tests**: 4 passing (0 failing)
+- **Coverage**: 100% for implemented features
+- **TDD Cycles Completed**: 4
+- **Contract Tests**: 1 (WingetAdapter)
+
+### 🎯 **Sprint Goals**
+
+1. **Current Sprint**: Complete WingetAdapter unit tests (section 7.2)
+2. **Next Sprint**: Integration tests with stubbed child processes
+3. **Future**: E2E tests with Playwright + Electron

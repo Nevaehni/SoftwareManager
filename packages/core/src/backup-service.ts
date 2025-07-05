@@ -16,7 +16,7 @@ export class BackupService {
             fs.mkdirSync('tmp');
         }
         fs.writeFileSync('tmp/spec.yaml', '');
-        
+
         if (this.adapter && this.shouldExport()) {
             this.adapter.exportList('tmp/spec.yaml');
         }
@@ -27,12 +27,12 @@ export class BackupService {
         if (!this.settings) {
             return true;
         }
-        
+
         // If choco is explicitly disabled, skip export
         if (this.settings.enableChoco === false) {
             return false;
         }
-        
+
         return true;
     }
 }
