@@ -1,0 +1,77 @@
+﻿# Current Packages - Generated 2025-06-22 02:36:34
+# This file contains packages currently installed on this system
+# Prefix packages with '+' to include their configurations in backup/restore
+#
+# To use this file:
+# 1. Review the list and add '+' prefix to packages whose configs you want to backup
+# 2. Rename this file to 'packages.txt'
+# 3. Run backup mode to export configurations
+#
+
+AdvancedMicroDevicesInc.AMDChipsetDrivers
+AdvancedMicroDevicesInc.AMDChipsetSoftware
+AdvancedMicroDevicesInc.AMDDVR64
+AdvancedMicroDevicesInc.AMDGPIO2Driver
+AdvancedMicroDevicesInc.AMDInstallManager
+AdvancedMicroDevicesInc.AMDPCIDriver
+AdvancedMicroDevicesInc.AMDPSPDriver
+AdvancedMicroDevicesInc.AMDRyzenBalancedDriver
+AdvancedMicroDevicesInc.AMDSBxxxSMBusDriver
+AdvancedMicroDevicesInc.AMDSettings
+AdvancedMicroDevicesInc.AMDSoftware
+AdvancedMicroDevicesInc.AMDWVR64
+AdvancedMicroDevicesInc.Branding64
+AdvancedMicroDevicesInc.PromontoryGPIODriver
+AdvancedMicroDevicesInc.RyzenMasterSDK
+AnsgarBecker.HeidiSQL121007000
+AppWorkGmbH.JDownloader2
+BalenaLtdhellobalenaio.balenaEtcher
+DBeaverCorp.DBeaver2510currentuser
+DiscordInc.Discord
+DockerInc.DockerDesktop
+getcomposerorg.ComposerPHPDependencyManager
+GitKraken.GitKraken
+GoogleLLC.GoogleChrome
+GoogleLLC.GoogleDrive
+IgorPavlov.7Zip2409x64
+JetBrains.JetBrainsToolbox
+JetBrainssro.PhpStorm
+LMStudio.LMStudio0316
+Microsoft.MicrosoftTeamsMeetingAddinforMicrosoftOffice
+MicrosoftCorporation.Office16ClicktoRunExtensibilityComponent
+MicrosoftCorporation.Office16ClicktoRunLicensingComponent
+MicrosoftCorporation.PowerShell7x64
+MilosParipovic.OneCommander
+MongoDBInc.MongoDB80102008R2PlusSSL64bit
+MongoDBInc.MongoDBCompass
+NodejsFoundation.Nodejs
+NordSecurity.NordUpdater
+NordSecurity.NordVPN
+OpenVPNInc.OpenVPNConnect
+Oracleandoritsaffiliates.OracleVirtualBox7110
+ParadoxDevelopmentStudio.Victoria3
+ParadoxInteractive.ParadoxLauncherv2
+Postman.Postmanx866411505
+PythonSoftwareFoundation.Python311064bit
+PythonSoftwareFoundation.Python3110AddtoPath64bit
+PythonSoftwareFoundation.Python3110CoreInterpreter64bit
+PythonSoftwareFoundation.Python3110DevelopmentLibraries64bit
+PythonSoftwareFoundation.Python3110Documentation64bit
+PythonSoftwareFoundation.Python3110Executables64bit
+PythonSoftwareFoundation.Python3110pipBootstrap64bit
+PythonSoftwareFoundation.Python3110StandardLibrary64bit
+PythonSoftwareFoundation.Python3110TclTkSupport64bit
+PythonSoftwareFoundation.Python3110TestSuite64bit
+PythonSoftwareFoundation.Python3110UtilityScripts64bit
+PythonSoftwareFoundation.PythonLauncher
+SimonTatham.PuTTYrelease08364bit
+TeamViewer.TeamViewer
+TheGitDevelopmentCommunity.Git
+TheqBittorrentproject.qBittorrent
+TimKosse.FileZilla3691
+Ubisoft.UbisoftConnect
+UbisoftMontreal.TomClancysRainbowSixSiegeX
+Valve.Deadlock
+ValveCorporation.Steam
+Victoria3ChartersofCommerce
+VideoLAN.VLCmediaplayer

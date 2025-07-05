@@ -2,6 +2,10 @@
 
 A PowerShell script that automates backup and restore of applications and their configurations using Chocolatey.
 
+> New in branch **`Electron`**: a cross-platform desktop GUI built with **Electron**, **React/TypeScript**, **Tailwind CSS**, and **shadcn/ui**. The application wraps the original PowerShell engine, offering a clean, minimal interface for backup and restore workflows while keeping the core logic unchanged.
+
+---
+
 ## Features
 
 - **Backup Mode**: Export application configurations from your current PC

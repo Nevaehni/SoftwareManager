@@ -1,3 +1,11 @@
-discord
+# Sample packages for Software Manager
+# Regular packages (install only)
+7zip
 googlechrome
-+putty
+vlc
+
+# Packages with config backup/restore (prefix with +)
++vscode
++git
++discord
++steam
