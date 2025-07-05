@@ -3,31 +3,31 @@ import * as fs from 'fs';
 import * as sinon from 'sinon';
 
 describe('BackupService', () => {
-    it('BackupService_createsDirs', () => {
+    it('BackupService_createsDirs', async () => {
         const backupService = new BackupService();
-        backupService.run();
+        await backupService.run();
         expect(fs.existsSync('tmp/spec.yaml')).toBe(true);
     });
 
-    it('BackupService_callsExport', () => {
+    it('BackupService_callsExport', async () => {
         // Red phase: test for delegating to PackageAdapter.exportList
         const mockAdapter = {
             exportList: sinon.spy()
         };
         const backupService = new BackupService(mockAdapter);
-        backupService.run();
+        await backupService.run();
         expect(mockAdapter.exportList.calledOnce).toBe(true);
         expect(mockAdapter.exportList.calledWith('tmp/spec.yaml')).toBe(true);
     });
 
-    it('BackupService_respectsSettings', () => {
+    it('BackupService_respectsSettings', async () => {
         // Red phase: test for respecting settings that disable managers
         const mockAdapter = {
             exportList: sinon.spy()
         };
         const settings = { enableChoco: false };
         const backupService = new BackupService(mockAdapter, settings);
-        backupService.run();
+        await backupService.run();
         expect(mockAdapter.exportList.called).toBe(false);
     });
 });

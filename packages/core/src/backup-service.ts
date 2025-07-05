@@ -9,16 +9,14 @@ export class BackupService {
     constructor(adapter?: PackageAdapter, settings?: Settings) {
         this.adapter = adapter;
         this.settings = settings;
-    }
-
-    run() {
+    } async run(): Promise<void> {
         if (!fs.existsSync('tmp')) {
             fs.mkdirSync('tmp');
         }
         fs.writeFileSync('tmp/spec.yaml', '');
 
         if (this.adapter && this.shouldExport()) {
-            this.adapter.exportList('tmp/spec.yaml');
+            await this.adapter.exportList('tmp/spec.yaml');
         }
     }
 

@@ -1,0 +1,1 @@
+{"version":3,"file":"winget-adapter.contract.spec.js","sourceRoot":"","sources":["../../../../../packages/adapters/windows/__tests__/winget-adapter.contract.spec.ts"],"names":[],"mappings":";;AACA,yDAAoE;AACpE,sDAAkD;AAElD,QAAQ,CAAC,eAAe,EAAE,GAAG,EAAE;IAC3B,IAAA,iDAA8B,EAAC,GAAG,EAAE,CAAC,IAAI,8BAAa,EAAE,CAAC,CAAC;AAC9D,CAAC,CAAC,CAAC"}

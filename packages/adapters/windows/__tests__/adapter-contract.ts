@@ -5,12 +5,12 @@ import { PackageAdapter } from '../../../core/src/package-adapter';
  */
 export function shouldBehaveLikePackageAdapter(factory: () => PackageAdapter) {
     describe('PackageAdapter contract', () => {
-        it('exportList creates file with package data', () => {
+        it('exportList creates file with package data', async () => {
             const adapter = factory();
             const filename = 'test-output.yaml';
 
             // This test will fail until we implement the adapter properly
-            expect(() => adapter.exportList(filename)).not.toThrow();
+            await expect(adapter.exportList(filename)).resolves.not.toThrow();
         });
     });
 }

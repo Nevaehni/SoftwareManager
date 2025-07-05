@@ -1,3 +1,3 @@
 export interface PackageAdapter {
-    exportList(filename: string): void;
+    exportList(filename: string): Promise<void> | void;
 }
