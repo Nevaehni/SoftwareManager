@@ -143,7 +143,7 @@ function App() {
         onSelectPackageFile={selectPackageFile}
         onEditConfigMappings={editConfigMappings}
       />        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <div className="flex-1 overflow-y-auto">
+          <div className={`flex-1 ${selectedTab === 'editor' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
             {renderTabContent()}
           </div>
 

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import Editor from '@monaco-editor/react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Save, RotateCcw, Edit3, X } from 'lucide-react'
 
 interface FileEditorProps {
@@ -98,19 +97,16 @@ export function FileEditor({ filePath, onLog, onClose }: FileEditorProps) {
 
   if (!filePath) {
     return (
-      <Card className="h-full">
-        <CardContent className="flex items-center justify-center h-full">
-          <div className="text-center text-muted-foreground">
-            <Edit3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Select a file to edit</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center text-muted-foreground">
+          <Edit3 className="h-12 w-12 mx-auto mb-4" />
+          <p>Select a file to edit</p>
+        </div>
+      </div>
     )
   }
-
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden" style={{ minHeight: '400px' }}>
       {/* Editor Header */}
       <div className="flex items-center justify-between py-2 px-3 border-b bg-muted/30 flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -155,7 +151,7 @@ export function FileEditor({ filePath, onLog, onClose }: FileEditorProps) {
       </div>
 
       {/* Editor Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden" style={{ minHeight: '300px' }}>
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-muted-foreground">Loading file...</div>
