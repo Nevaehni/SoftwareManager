@@ -311,6 +311,9 @@ Adhering to this document is **non‑negotiable** for v 1.0 and all future rel
 | **Unit** | BackupService | `BackupService_callsExport` | ✅ PASS | Delegates to `PackageAdapter.exportList()` |
 | **Unit** | BackupService | `BackupService_respectsSettings` | ✅ PASS | Skips export when `enableChoco: false` |
 | **Contract** | WingetAdapter | `PackageAdapter contract` | ✅ PASS | Implements `exportList()` interface |
+| **Unit** | WingetAdapter | `Winget_search_parses` | ✅ PASS | Parse JSON output from `winget search` |
+| **Unit** | WingetAdapter | `Winget_install_version` | ✅ PASS | Pin version in install command |
+| **Unit** | WingetAdapter | `Winget_ensure_absent` | ✅ PASS | Return false when exit code ≠ 0 |
 
 ### 🔄 **In Progress**
 
@@ -320,18 +323,15 @@ Adhering to this document is **non‑negotiable** for v 1.0 and all future rel
 
 | Layer | Component | Test ID | Description |
 |-------|-----------|---------|-------------|
-| **Unit** | WingetAdapter | `Winget_search_parses` | Parse JSON output from `winget search` |
-| **Unit** | WingetAdapter | `Winget_install_version` | Pin version in install command |
-| **Unit** | WingetAdapter | `Winget_ensure_absent` | Return false when exit code ≠ 0 |
 | **Integration** | Bundle Creation | `Bundle_includes_packages` | End-to-end backup flow |
 | **E2E** | UI Flow | `backup-restore.spec.ts` | Playwright test for full workflow |
 
 ### 📊 **Current Metrics**
 
-- **Test Suites**: 2 passing
-- **Total Tests**: 4 passing (0 failing)
+- **Test Suites**: 3 passing
+- **Total Tests**: 7 passing (0 failing)
 - **Coverage**: 100% for implemented features
-- **TDD Cycles Completed**: 4
+- **TDD Cycles Completed**: 7
 - **Contract Tests**: 1 (WingetAdapter)
 
 ### 🎯 **Sprint Goals**
