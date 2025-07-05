@@ -1,7 +1,7 @@
 packages:
-  - id: Git.Git
-    name: Git
-    version: 2.42.0
-  - id: Microsoft.VisualStudioCode
-    name: Visual Studio Code
-    version: 1.85.0
+  - id: chocolatey
+    name: chocolatey
+    version: 2.2.2
+  - id: nodejs
+    name: nodejs
+    version: 20.10.0
