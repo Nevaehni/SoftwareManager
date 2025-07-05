@@ -69,11 +69,29 @@ app.on('window-all-closed', () => {
 // IPC handlers for PowerShell operations
 ipcMain.handle('execute-powershell', async (event, script, args = []) => {
   return new Promise((resolve, reject) => {
-    const powershellPath = isDev 
-      ? path.join(__dirname, '../_old/SoftwareManager.ps1')
-      : path.join(app.getAppPath(), 'powershell/SoftwareManager.ps1')
-    const psArgs = ['-ExecutionPolicy', 'Bypass', '-File', powershellPath, ...args]
-    
+    // If script is a full path, use it directly; otherwise, construct path to script
+    let scriptPath
+    if (path.isAbsolute(script)) {
+      scriptPath = script
+    } else {
+      // Default to SoftwareManager.ps1 for backward compatibility
+      if (!script || script === '') {
+        scriptPath = isDev
+          ? path.join(__dirname, '../_old/SoftwareManager.ps1')
+          : path.join(app.getAppPath(), 'powershell/SoftwareManager.ps1')
+      } else {
+        // Use the provided script name
+        scriptPath = isDev
+          ? path.join(__dirname, '../powershell', script)
+          : path.join(app.getAppPath(), 'powershell', script)
+      }
+    }
+
+    const psArgs = ['-ExecutionPolicy', 'Bypass', '-File', scriptPath, ...args]
+
+    console.log('Executing PowerShell script:', scriptPath)
+    console.log('With arguments:', args)
+
     const ps = spawn('powershell.exe', psArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
       shell: true
@@ -150,9 +168,9 @@ ipcMain.handle('file-exists', async (event, filePath) => {
 ipcMain.handle('read-file', async (event, filePath) => {
   try {
     const content = await fs.promises.readFile(filePath, 'utf8')
-    return { success: true, content }
+    return content
   } catch (error) {
-    return { success: false, error: error.message }
+    throw new Error(`Failed to read file: ${error.message}`)
   }
 })
 
@@ -160,8 +178,8 @@ ipcMain.handle('read-file', async (event, filePath) => {
 ipcMain.handle('write-file', async (event, filePath, content) => {
   try {
     await fs.promises.writeFile(filePath, content, 'utf8')
-    return { success: true }
+    return true
   } catch (error) {
-    return { success: false, error: error.message }
+    throw new Error(`Failed to write file: ${error.message}`)
   }
 })

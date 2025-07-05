@@ -16,41 +16,31 @@ export function FileEditor({ filePath, onLog, onClose }: FileEditorProps) {
   const [isModified, setIsModified] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-
   const loadFile = async () => {
     if (!filePath || !window.electronAPI) return
 
     setIsLoading(true)
     try {
-      const result = await window.electronAPI.readFile(filePath)
-      if (result.success && result.content !== undefined) {
-        setContent(result.content)
-        setOriginalContent(result.content)
-        setIsModified(false)
-        onLog(`Loaded file: ${filePath}`, 'info')
-      } else {
-        onLog(`Failed to load file: ${result.error}`, 'error')
-      }
+      const content = await window.electronAPI.readFile(filePath)
+      setContent(content)
+      setOriginalContent(content)
+      setIsModified(false)
+      onLog(`Loaded file: ${filePath}`, 'info')
     } catch (error) {
       onLog(`Error loading file: ${error}`, 'error')
     } finally {
       setIsLoading(false)
     }
   }
-
   const saveFile = async () => {
     if (!filePath || !window.electronAPI) return
 
     setIsSaving(true)
     try {
-      const result = await window.electronAPI.writeFile(filePath, content)
-      if (result.success) {
-        setOriginalContent(content)
-        setIsModified(false)
-        onLog(`Saved file: ${filePath}`, 'success')
-      } else {
-        onLog(`Failed to save file: ${result.error}`, 'error')
-      }
+      await window.electronAPI.writeFile(filePath, content)
+      setOriginalContent(content)
+      setIsModified(false)
+      onLog(`Saved file: ${filePath}`, 'success')
     } catch (error) {
       onLog(`Error saving file: ${error}`, 'error')
     } finally {
@@ -163,7 +153,7 @@ export function FileEditor({ filePath, onLog, onClose }: FileEditorProps) {
           )}
         </div>
       </div>
-      
+
       {/* Editor Content */}
       <div className="flex-1 overflow-hidden">
         {isLoading ? (

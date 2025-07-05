@@ -1,11 +1,8 @@
-# Sample packages for Software Manager
-# Regular packages (install only)
-7zip
+﻿7zip
 googlechrome
 vlc
-
-# Packages with config backup/restore (prefix with +)
-+vscode
-+git
-+discord
-+steam
++putty
++filezilla
+betterdiscord
+amongus-extraroles
++chainner

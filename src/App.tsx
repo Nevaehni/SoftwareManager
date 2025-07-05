@@ -1,15 +1,52 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
-import { Download, Upload, Package, FolderOpen, Copy, Edit3, FileText } from 'lucide-react'
+import { Download, Upload, Package, FolderOpen, Copy, Edit3, FileText, Search, Plus, Monitor } from 'lucide-react'
 import { FileEditor } from '@/components/FileEditor'
+import { ToastContainer, useToast } from '@/components/ui/toast-container'
+import { SystemInfoModal } from '@/components/SystemInfoModal'
 
 interface OperationLog {
   timestamp: string
   message: string
   type: 'info' | 'error' | 'success' | 'warning'
+}
+
+interface ChocolateyPackage {
+  name: string
+  title: string
+  summary: string
+  version: string
+}
+
+interface InstalledProgram {
+  name: string
+  version: string
+  publisher: string
+}
+
+interface PackageStats {
+  success: boolean
+  chocolatey: {
+    available: boolean
+    version: string
+    installedPackages: number
+  }
+  packagesFile: {
+    exists: boolean
+    totalPackages: number
+    configPackages: number
+  }
+  installedPrograms: {
+    registry: number
+    store: number
+  }
+  system: {
+    isAdmin: boolean
+    psVersion: string
+    os: string
+  }
 }
 
 function App() {
@@ -20,6 +57,19 @@ function App() {
   const [selectedPackageFile, setSelectedPackageFile] = useState<string | null>(null)
   const [selectedConfigFile, setSelectedConfigFile] = useState<string | null>(null)
   const [editingFile, setEditingFile] = useState<string | null>(null)
+  // Package management state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<ChocolateyPackage[]>([])
+  const [installedPrograms, setInstalledPrograms] = useState<InstalledProgram[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [isLoadingPrograms, setIsLoadingPrograms] = useState(false)
+  const [packageStats, setPackageStats] = useState<PackageStats | null>(null)
+  const [isLoadingStats, setIsLoadingStats] = useState(false)
+  // Toast notifications
+  const { toasts, removeToast, showSuccess, showError, showInfo } = useToast()
+  // System Info Modal state
+  const [isSystemInfoModalOpen, setIsSystemInfoModalOpen] = useState(false)
+  const [includeConfig, setIncludeConfig] = useState(false)
 
   // Helper function to display file names nicely
   const getDisplayFileName = (filePath: string | null) => {
@@ -197,7 +247,6 @@ function App() {
       setSelectedTab('editor')
     }
   }
-
   const editConfigMappings = async () => {
     if (!window.electronAPI) return
 
@@ -210,6 +259,272 @@ function App() {
       addLog(`Could not open ConfigMappings.ps1: ${error}`, 'error')
     }
   }
+  // Package management functions
+  const searchChocolateyPackages = async () => {
+    if (!window.electronAPI || !searchQuery.trim()) return
+
+    setIsSearching(true)
+    addLog(`Searching for packages matching: ${searchQuery}`, 'info')
+
+    try {
+      // Use the new SearchPackages.ps1 script
+      const appPath = await window.electronAPI.getAppPath()
+      const scriptPath = `${appPath}\\powershell\\SearchPackages.ps1`
+
+      const result = await window.electronAPI.executePowerShell(scriptPath, [
+        '-SearchTerm', searchQuery,
+        '-MaxResults', '25'
+      ])
+
+      if (result.success && result.stdout) {
+        try {
+          const searchData = JSON.parse(result.stdout)
+
+          if (searchData.Success && searchData.Packages) {
+            const packages: ChocolateyPackage[] = searchData.Packages.map((pkg: any) => ({
+              name: pkg.Id,
+              title: pkg.Title || pkg.Id,
+              summary: pkg.Summary || 'No description available',
+              version: pkg.Version
+            }))
+
+            setSearchResults(packages)
+            addLog(`Found ${packages.length} packages`, 'success')
+          } else {
+            addLog(searchData.Error || 'No packages found', 'warning')
+            setSearchResults([])
+          }
+        } catch (parseError) {
+          // Fallback to old method if JSON parsing fails
+          const packages: ChocolateyPackage[] = []
+          const lines = result.stdout.split('\n').filter(line => line.trim())
+
+          for (const line of lines) {
+            const parts = line.split('|')
+            if (parts.length >= 2) {
+              packages.push({
+                name: parts[0],
+                title: parts[0],
+                summary: parts.length > 2 ? parts[2] : 'No description available',
+                version: parts[1]
+              })
+            }
+          }
+
+          setSearchResults(packages)
+          addLog(`Found ${packages.length} packages (fallback method)`, 'success')
+        }
+      } else {
+        addLog('No packages found or Chocolatey not available', 'warning')
+        setSearchResults([])
+      }
+    } catch (error) {
+      addLog(`Error searching packages: ${error}`, 'error')
+      setSearchResults([])
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const addPackageToList = async (packageName: string, includeConfig: boolean) => {
+    if (!selectedPackageFile || !window.electronAPI) {
+      showError('No package file selected', 'Package Addition Failed')
+      addLog('No package file selected', 'error')
+      return
+    }
+
+    try {
+      // Show info toast while processing
+      showInfo(`Adding ${packageName}${includeConfig ? ' with config backup' : ''} to package list...`, 'Processing')
+
+      // Use the new AddPackage.ps1 script
+      const appPath = await window.electronAPI.getAppPath()
+      const scriptPath = `${appPath}\\powershell\\AddPackage.ps1`
+
+      const args = [
+        '-PackageName', packageName,
+        '-PackagesFile', selectedPackageFile,
+        '-ValidatePackage'
+      ]
+
+      if (includeConfig) {
+        args.push('-IncludeConfig')
+      }
+
+      const result = await window.electronAPI.executePowerShell(scriptPath, args)
+
+      if (result.success && result.stdout) {
+        try {
+          const addResult = JSON.parse(result.stdout)
+
+          if (addResult.Success) {
+            const configText = addResult.WithConfig ? ' with config backup' : ''
+            const updateText = addResult.Updated ? ' (updated)' : ''
+            const successMessage = `${packageName}${configText} has been added to your package list${updateText}`
+
+            showSuccess(successMessage, 'Package Added Successfully')
+            addLog(`Added ${packageName}${configText} to package list${updateText}`, 'success')
+          } else {
+            const errorMessage = addResult.Error || `Failed to add ${packageName}`
+            showError(errorMessage, 'Package Addition Failed')
+            addLog(errorMessage, 'error')
+          }
+        } catch (parseError) {
+          // Fallback success message if JSON parsing fails
+          const successMessage = `${includeConfig ? '+' : ''}${packageName} has been added to your package list`
+          showSuccess(successMessage, 'Package Added')
+          addLog(successMessage, 'success')
+        }
+      } else {
+        // Fallback to old method if script fails
+        const content = await window.electronAPI.readFile(selectedPackageFile)
+        const packageEntry = includeConfig ? `+${packageName}` : packageName
+        const newContent = content + '\n' + packageEntry
+        await window.electronAPI.writeFile(selectedPackageFile, newContent)
+
+        const successMessage = `${packageEntry} has been added to your package list`
+        showSuccess(successMessage, 'Package Added')
+        addLog(successMessage, 'success')
+      }
+    } catch (error) {
+      const errorMessage = `Error adding package to list: ${error}`
+      showError(errorMessage, 'Package Addition Failed')
+      addLog(errorMessage, 'error')
+    }
+  }
+  const loadInstalledPrograms = async () => {
+    if (!window.electronAPI) return
+
+    setIsLoadingPrograms(true)
+    addLog('Loading installed programs...', 'info')
+
+    try {
+      // Use the new GetInstalledPrograms.ps1 script
+      const appPath = await window.electronAPI.getAppPath()
+      const scriptPath = `${appPath}\\powershell\\GetInstalledPrograms.ps1`
+
+      const result = await window.electronAPI.executePowerShell(scriptPath, ['-Format', 'JSON'])
+
+      if (result.success && result.stdout) {
+        try {
+          const programsData = JSON.parse(result.stdout)
+
+          if (programsData.Success && programsData.Programs) {
+            const programList: InstalledProgram[] = programsData.Programs.map((prog: any) => ({
+              name: prog.Name || 'Unknown',
+              version: prog.Version || 'Unknown',
+              publisher: prog.Publisher || 'Unknown'
+            }))
+
+            setInstalledPrograms(programList.sort((a, b) => a.name.localeCompare(b.name)))
+            addLog(`Loaded ${programList.length} installed programs`, 'success')
+          } else {
+            addLog(programsData.Error || 'No programs found', 'warning')
+            setInstalledPrograms([])
+          }
+        } catch (parseError) {
+          // Fallback to old WMI method if JSON parsing fails
+          addLog('Using fallback method to load programs...', 'info')
+
+          const fallbackResult = await window.electronAPI.executePowerShell('wmic product get name,version,vendor /format:csv', [])
+
+          if (fallbackResult.success && fallbackResult.stdout) {
+            const lines = fallbackResult.stdout.split('\n').filter(line => line.trim() && !line.startsWith('Node,'))
+            const programList: InstalledProgram[] = []
+
+            for (const line of lines) {
+              const parts = line.split(',')
+              if (parts.length >= 4) {
+                const name = parts[1]?.trim()
+                const vendor = parts[2]?.trim()
+                const version = parts[3]?.trim()
+
+                if (name && name !== 'Name') {
+                  programList.push({
+                    name: name || 'Unknown',
+                    version: version || 'Unknown',
+                    publisher: vendor || 'Unknown'
+                  })
+                }
+              }
+            }
+
+            setInstalledPrograms(programList.sort((a, b) => a.name.localeCompare(b.name)))
+            addLog(`Loaded ${programList.length} installed programs (fallback)`, 'success')
+          } else {
+            addLog('Could not retrieve installed programs', 'warning')
+            setInstalledPrograms([])
+          }
+        }
+      } else {
+        addLog('Could not retrieve installed programs', 'warning')
+        setInstalledPrograms([])
+      }
+    } catch (error) {
+      addLog(`Error loading installed programs: ${error}`, 'error')
+      setInstalledPrograms([])
+    } finally {
+      setIsLoadingPrograms(false)
+    }
+  }
+
+  const loadPackageStats = async () => {
+    if (!window.electronAPI) return
+
+    setIsLoadingStats(true)
+    addLog('Loading package statistics...', 'info')
+
+    try {
+      const appPath = await window.electronAPI.getAppPath()
+      const scriptPath = `${appPath}\\powershell\\GetPackageStats.ps1`
+
+      const result = await window.electronAPI.executePowerShell(scriptPath, ['-Format', 'JSON'])
+
+      if (result.success && result.stdout) {
+        try {
+          const statsData = JSON.parse(result.stdout)
+
+          const stats: PackageStats = {
+            success: true,
+            chocolatey: {
+              available: statsData.Chocolatey?.Available || false,
+              version: statsData.Chocolatey?.Version || '',
+              installedPackages: statsData.Chocolatey?.InstalledPackages || 0
+            },
+            packagesFile: {
+              exists: statsData.PackagesFile?.Exists || false,
+              totalPackages: statsData.PackagesFile?.TotalPackages || 0,
+              configPackages: statsData.PackagesFile?.ConfigPackages || 0
+            },
+            installedPrograms: {
+              registry: statsData.InstalledPrograms?.Registry || 0,
+              store: statsData.InstalledPrograms?.Store || 0
+            },
+            system: {
+              isAdmin: statsData.System?.IsAdmin || false,
+              psVersion: statsData.System?.PSVersion || '',
+              os: statsData.System?.OS || ''
+            }
+          }
+
+          setPackageStats(stats)
+          addLog('Package statistics loaded successfully', 'success')
+        } catch (parseError) {
+          addLog('Error parsing package statistics', 'error')
+          setPackageStats(null)
+        }
+      } else {
+        addLog('Could not load package statistics', 'warning')
+        setPackageStats(null)
+      }
+    } catch (error) {
+      addLog(`Error loading package statistics: ${error}`, 'error')
+      setPackageStats(null)
+    } finally {
+      setIsLoadingStats(false)
+    }
+  }
+
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
@@ -221,6 +536,15 @@ function App() {
               Chocolatey package and configuration management
             </p>
           </div>          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => setIsSystemInfoModalOpen(true)}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Monitor className="h-4 w-4" />
+              System Info
+            </Button>
             {isRunning && (
               <>
                 <span className="text-sm text-muted-foreground">Operation in progress...</span>
@@ -266,7 +590,18 @@ function App() {
           >
             <Edit3 className="h-4 w-4 mr-2" />
             Editor
-          </Button>        </nav>
+          </Button>
+          <Button
+            onClick={() => {
+              setSelectedTab('packages')
+              setEditingFile(null)
+            }}
+            variant={selectedTab === 'packages' ? 'default' : 'ghost'}
+            className="w-full justify-start"
+          >
+            <Package className="h-4 w-4 mr-2" />
+            Manage Packages
+          </Button></nav>
 
           {/* Files Section in Sidebar */}
           <div className="p-4 border-t overflow-y-auto">
@@ -376,7 +711,7 @@ function App() {
                   ) : (
                     <>
                       <div className="text-center text-sm text-muted-foreground">
-                        Package file: <span className="font-medium">{getDisplayFileName(selectedPackageFile)?.fileName}</span>
+                        Using package file: <span className="font-medium">{getDisplayFileName(selectedPackageFile)?.fileName}</span>
                       </div>
                       <Button
                         onClick={() => executeOperation('backup')}
@@ -395,6 +730,157 @@ function App() {
                   </p>
                 </div>
               </Card>
+            </div>
+          </div>
+        ) : selectedTab === 'packages' ? (
+          /* Manage Packages Mode */
+          <div className="flex-1 p-8 overflow-y-auto">
+            <div className="max-w-6xl mx-auto space-y-8">
+              <div className="text-center space-y-4">
+                <h2 className="text-3xl font-bold">Manage Packages</h2>
+                <p className="text-muted-foreground">Search for new packages or view installed programs</p>
+              </div>              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Chocolatey Package Search */}
+                <Card className="p-6">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2">
+                      <Search className="h-5 w-5" />
+                      Search Packages
+                    </CardTitle>
+                    <CardDescription>
+                      Find and add packages to your package list
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Search for packages..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && searchChocolateyPackages()}
+                        className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        disabled={isSearching}
+                      />
+                      <Button
+                        onClick={searchChocolateyPackages}
+                        disabled={isSearching || !searchQuery.trim()}
+                      >
+                        <Search className="h-4 w-4" />
+                      </Button>
+                    </div>                    {!selectedPackageFile && (
+                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                          Please select a package file first to add packages to your list.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Include Config Checkbox */}
+                    <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                      <input
+                        type="checkbox"
+                        id="includeConfig"
+                        checked={includeConfig}
+                        onChange={(e) => setIncludeConfig(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <label htmlFor="includeConfig" className="text-sm font-medium cursor-pointer">
+                        Include config prefix
+                      </label>
+                    </div>
+
+                    <div className="max-h-96 overflow-y-auto space-y-2">
+                      {isSearching && (
+                        <div className="text-center py-8">
+                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                          <p className="mt-2 text-muted-foreground">Searching packages...</p>
+                        </div>
+                      )}
+
+                      {!isSearching && searchResults.length === 0 && searchQuery && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          No packages found. Try a different search term.
+                        </div>
+                      )}
+
+                      {searchResults.map((pkg, index) => (
+                        <div key={index} className="p-3 border rounded-lg space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium truncate">{pkg.name}</h4>
+                              <p className="text-sm text-muted-foreground">v{pkg.version}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{pkg.summary}</p>
+                            </div>
+                          </div>                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => addPackageToList(pkg.name, includeConfig)}
+                              disabled={!selectedPackageFile}
+                              className="w-full"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Package{includeConfig ? ' + Config' : ''}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Installed Programs */}
+                <Card className="p-6">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2">
+                      <Monitor className="h-5 w-5" />
+                      Installed Programs
+                    </CardTitle>
+                    <CardDescription>
+                      View all programs currently installed on this PC
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Button
+                      onClick={loadInstalledPrograms}
+                      disabled={isLoadingPrograms}
+                      className="w-full"
+                    >
+                      {isLoadingPrograms ? (
+                        <>
+                          <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Loading Programs...
+                        </>
+                      ) : (
+                        <>
+                          <Monitor className="h-4 w-4 mr-2" />
+                          Load Installed Programs
+                        </>
+                      )}
+                    </Button>
+
+                    <div className="max-h-96 overflow-y-auto space-y-2">
+                      {installedPrograms.length === 0 && !isLoadingPrograms && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          Click "Load Installed Programs" to view software installed on this PC.
+                        </div>
+                      )}
+
+                      {installedPrograms.map((program, index) => (
+                        <div key={index} className="p-3 border rounded-lg">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium truncate">{program.name}</h4>
+                              <p className="text-sm text-muted-foreground">v{program.version}</p>
+                              <p className="text-xs text-muted-foreground">{program.publisher}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         ) : selectedTab === 'restore' ? (
@@ -463,12 +949,22 @@ function App() {
         ) : (
           /* Home Dashboard */
           <div className="flex-1 p-8 overflow-y-auto">
-            <div className="max-w-4xl mx-auto space-y-8">                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="p-8 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-200" onClick={() => {
-                setSelectedTab('backup')
-                setEditingFile(null)
-              }}>
-              </Card>
+            <div className="max-w-4xl mx-auto space-y-8">                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">              <Card className="p-8 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-200" onClick={() => {
+              setSelectedTab('backup')
+              setEditingFile(null)
+            }}>
+              <div className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Upload className="h-8 w-8 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">Backup</h3>
+                  <p className="text-muted-foreground mt-2">
+                    Create a backup of your configurations
+                  </p>
+                </div>
+              </div>
+            </Card>
 
               <Card className="p-8 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-green-200" onClick={() => {
                 setSelectedTab('restore')
@@ -534,7 +1030,7 @@ function App() {
             <div className="h-full flex flex-col">
               <div className="p-3 border-b bg-muted/30">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium">Console Output ({logs.length})</h3>
+                  <h3 className="font-medium">Console Output</h3>
                   <div className="flex gap-2">
                     <Button onClick={copyAllLogs} size="sm" variant="outline" disabled={logs.length === 0}>
                       <Copy className="h-4 w-4" />
@@ -564,12 +1060,22 @@ function App() {
                         <span className="text-slate-500">[{log.timestamp}]</span> {log.message}
                       </div>
                     ))}                    </div>
-                )}
-              </div>
+                )}              </div>
             </div>
           </div>
         </div>
       </div>
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
+
+      {/* System Info Modal */}
+      <SystemInfoModal
+        open={isSystemInfoModalOpen}
+        onClose={() => setIsSystemInfoModalOpen(false)}
+        packageStats={packageStats}
+        isLoadingStats={isLoadingStats}
+        onLoadStats={loadPackageStats}
+      />
     </div>
   )
 }

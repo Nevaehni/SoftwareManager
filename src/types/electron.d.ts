@@ -6,7 +6,7 @@ interface ElectronAPI {
     stderr: string;
     exitCode: number;
   }>;
-  
+
   // File operations
   selectFile: (options: {
     title?: string;
@@ -15,14 +15,14 @@ interface ElectronAPI {
     canceled: boolean;
     filePaths: string[];
   }>;
-  
+
   selectFolder: (options?: {
     title?: string;
   }) => Promise<{
     canceled: boolean;
     filePaths: string[];
   }>;
-  
+
   showSaveDialog: (options: {
     title?: string;
     filters?: { name: string; extensions: string[] }[];
@@ -30,20 +30,19 @@ interface ElectronAPI {
     canceled: boolean;
     filePath?: string;
   }>;
-  
+
   // App paths
   getAppPath: () => Promise<string>;
   getUserDataPath: () => Promise<string>;
-  
+
   // File system
-  fileExists: (filePath: string) => Promise<boolean>;
-  readFile: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>;
-  writeFile: (filePath: string, content: string) => Promise<{ success: boolean; error?: string }>;
-  
+  fileExists: (filePath: string) => Promise<boolean>; readFile: (filePath: string) => Promise<string>;
+  writeFile: (filePath: string, content: string) => Promise<boolean>;
+
   // Event listeners
   onPowerShellOutput: (callback: (data: string) => void) => void;
   onPowerShellError: (callback: (data: string) => void) => void;
-  
+
   // Remove listeners
   removeAllListeners: (channel: string) => void;
 }
@@ -54,4 +53,4 @@ declare global {
   }
 }
 
-export {};
+export { };
