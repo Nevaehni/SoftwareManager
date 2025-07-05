@@ -27,8 +27,7 @@ export const PackageSearchCard = ({
     onAddPackage
 }: PackageSearchCardProps) => {
     return (
-        <Card className="p-6">
-            <CardHeader className="pb-4">
+        <Card className="p-4 h-full flex flex-col">            <CardHeader className="pb-3 flex-shrink-0">
                 <CardTitle className="flex items-center gap-2">
                     <Search className="h-5 w-5" />
                     Search Packages
@@ -37,7 +36,7 @@ export const PackageSearchCard = ({
                     Find and add packages to your package list
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="flex-1 space-y-3 min-h-0">
                 <div className="flex gap-2">
                     <input
                         type="text"
@@ -75,10 +74,9 @@ export const PackageSearchCard = ({
                     />
                     <label htmlFor="includeConfig" className="text-sm font-medium cursor-pointer">
                         Include config prefix
-                    </label>
-                </div>
+                    </label>                </div>
 
-                <div className="max-h-96 overflow-y-auto space-y-2">
+                <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
                     {isSearching && (
                         <div className="text-center py-8">
                             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

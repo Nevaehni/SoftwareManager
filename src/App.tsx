@@ -142,10 +142,8 @@ function App() {
         onEditPackageFile={editPackageFile}
         onSelectPackageFile={selectPackageFile}
         onEditConfigMappings={editConfigMappings}
-      />
-
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
+      />        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
             {renderTabContent()}
           </div>
 

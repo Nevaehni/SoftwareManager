@@ -43,9 +43,9 @@ export const PackagesTab = ({
     onSearchForProgram
 }: PackagesTabProps) => {
     return (
-        <div className="flex-1 p-8 overflow-y-auto">
-            <div className="max-w-6xl mx-auto space-y-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="flex-1 p-4 overflow-y-auto">
+            <div className="h-full space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
                     <PackageSearchCard
                         searchQuery={searchQuery}
                         searchResults={searchResults}

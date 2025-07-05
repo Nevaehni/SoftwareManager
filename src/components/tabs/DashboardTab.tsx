@@ -22,9 +22,9 @@ export const DashboardTab = ({
     const displayFile = getDisplayFileName(selectedPackageFile)
 
     return (
-        <div className="flex-1 p-8 overflow-y-auto">
-            <div className="max-w-4xl mx-auto space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex-1 p-4 overflow-y-auto">
+            <div className="h-full max-w-6xl mx-auto space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Card className="p-8 hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-200" onClick={() => onTabChange('backup')}>
                         <div className="text-center space-y-4">
                             <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">

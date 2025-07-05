@@ -24,8 +24,9 @@ export const RestoreTab = ({
     const displayConfigFile = getDisplayFileName(selectedConfigFile)
 
     return (
-        <div className="flex-1 p-8 overflow-y-auto">
-            <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex-1 p-4 overflow-y-auto">
+            <div className="h-full flex items-center justify-center">
+                <div className="w-full max-w-2xl space-y-6">
                 <Card className="p-6">
                     <div className="space-y-4">
                         <div>
@@ -76,13 +77,12 @@ export const RestoreTab = ({
                         >
                             <Download className="h-4 w-4 mr-2" />
                             {isRunning ? 'Installing & Restoring...' : 'Start Install & Restore'}
-                        </Button>
-
-                        <p className="text-sm text-muted-foreground text-center">
+                        </Button>                        <p className="text-sm text-muted-foreground text-center">
                             This will install packages via Chocolatey and restore configurations
                         </p>
                     </div>
                 </Card>
+                </div>
             </div>
         </div>
     )

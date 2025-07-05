@@ -19,9 +19,9 @@ export const BackupTab = ({
     const displayFile = getDisplayFileName(selectedPackageFile)
 
     return (
-        <div className="flex-1 p-8 overflow-y-auto">
-            <div className="max-w-2xl mx-auto space-y-6">
-                <Card className="p-6">
+        <div className="flex-1 p-4 overflow-y-auto">
+            <div className="h-full flex items-center justify-center">
+                <Card className="w-full max-w-lg p-8">
                     <div className="space-y-4">
                         {!selectedPackageFile ? (
                             <div className="text-center space-y-4">
@@ -50,8 +50,7 @@ export const BackupTab = ({
 
                         <p className="text-sm text-muted-foreground text-center">
                             This will create a configs.zip file with all backed up configurations
-                        </p>
-                    </div>
+                        </p>                    </div>
                 </Card>
             </div>
         </div>

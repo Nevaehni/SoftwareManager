@@ -23,8 +23,7 @@ export const InstalledProgramsCard = ({
     onSearchForProgram
 }: InstalledProgramsCardProps) => {
     return (
-        <Card className="p-6">
-            <CardHeader className="pb-4">
+        <Card className="p-4 h-full flex flex-col">            <CardHeader className="pb-3 flex-shrink-0">
                 <CardTitle className="flex items-center gap-2">
                     <Monitor className="h-5 w-5" />
                     Installed Programs
@@ -33,7 +32,7 @@ export const InstalledProgramsCard = ({
                     View all programs currently installed on this PC
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="flex-1 space-y-3 min-h-0">
                 <Button
                     onClick={onLoadPrograms}
                     disabled={isLoadingPrograms}
@@ -49,10 +48,9 @@ export const InstalledProgramsCard = ({
                             <Monitor className="h-4 w-4 mr-2" />
                             Load Installed Programs
                         </>
-                    )}
-                </Button>
+                    )}                </Button>
 
-                <div className="max-h-96 overflow-y-auto space-y-2">
+                <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
                     {installedPrograms.map((program, index) => (
                         <div key={index} className="p-3 border rounded-lg space-y-2">
                             <div className="flex items-start justify-between">
