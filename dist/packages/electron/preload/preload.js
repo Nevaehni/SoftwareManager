@@ -11,6 +11,10 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     // File system operations
     selectFile: (options) => electron_1.ipcRenderer.invoke('select-file', options),
     selectDirectory: () => electron_1.ipcRenderer.invoke('select-directory'),
+    // Window controls
+    minimizeWindow: () => electron_1.ipcRenderer.invoke('minimize-window'),
+    maximizeWindow: () => electron_1.ipcRenderer.invoke('maximize-window'),
+    closeWindow: () => electron_1.ipcRenderer.invoke('close-window'),
     // Event listeners
     onBackupProgress: (callback) => electron_1.ipcRenderer.on('backup-progress', callback),
     onRestoreProgress: (callback) => electron_1.ipcRenderer.on('restore-progress', callback),

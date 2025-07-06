@@ -17,12 +17,14 @@ export function createMainWindow(): BrowserWindow {
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
+        frame: false,
+        titleBarStyle: 'hidden',
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
             preload: path.join(__dirname, '..', 'preload', 'preload.js'),
         },
-    });    // Load the index.html file
+    });// Load the index.html file
     mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
     // Open DevTools in development
@@ -178,9 +180,7 @@ function setupIpcHandlers(): void {    // Backup packages
             console.error('File selection failed:', error);
             return { filePath: null, error: error instanceof Error ? error.message : 'Unknown error' };
         }
-    });
-
-    // Directory selection
+    });    // Directory selection
     ipcMain.handle('select-directory', async () => {
         try {
             const result = await dialog.showOpenDialog(mainWindow!, {
@@ -194,6 +194,29 @@ function setupIpcHandlers(): void {    // Backup packages
         } catch (error) {
             console.error('Directory selection failed:', error);
             return { directoryPath: null, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+    });
+
+    // Window controls
+    ipcMain.handle('minimize-window', () => {
+        if (mainWindow) {
+            mainWindow.minimize();
+        }
+    });
+
+    ipcMain.handle('maximize-window', () => {
+        if (mainWindow) {
+            if (mainWindow.isMaximized()) {
+                mainWindow.unmaximize();
+            } else {
+                mainWindow.maximize();
+            }
+        }
+    });
+
+    ipcMain.handle('close-window', () => {
+        if (mainWindow) {
+            mainWindow.close();
         }
     });
 }

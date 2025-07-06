@@ -51,6 +51,8 @@ function createMainWindow() {
     mainWindow = new electron_1.BrowserWindow({
         width: 1200,
         height: 800,
+        frame: false,
+        titleBarStyle: 'hidden',
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -197,8 +199,7 @@ function setupIpcHandlers() {
             console.error('File selection failed:', error);
             return { filePath: null, error: error instanceof Error ? error.message : 'Unknown error' };
         }
-    });
-    // Directory selection
+    }); // Directory selection
     electron_1.ipcMain.handle('select-directory', async () => {
         try {
             const result = await electron_1.dialog.showOpenDialog(mainWindow, {
@@ -212,6 +213,27 @@ function setupIpcHandlers() {
         catch (error) {
             console.error('Directory selection failed:', error);
             return { directoryPath: null, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+    });
+    // Window controls
+    electron_1.ipcMain.handle('minimize-window', () => {
+        if (mainWindow) {
+            mainWindow.minimize();
+        }
+    });
+    electron_1.ipcMain.handle('maximize-window', () => {
+        if (mainWindow) {
+            if (mainWindow.isMaximized()) {
+                mainWindow.unmaximize();
+            }
+            else {
+                mainWindow.maximize();
+            }
+        }
+    });
+    electron_1.ipcMain.handle('close-window', () => {
+        if (mainWindow) {
+            mainWindow.close();
         }
     });
 }

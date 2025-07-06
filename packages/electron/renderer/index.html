@@ -71,21 +71,26 @@
 
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
-        }
-
-        .professional-card {
+        }        .professional-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .drag-region {
+            -webkit-app-region: drag;
+        }
+
+        .no-drag {
+            -webkit-app-region: no-drag;
         }
     </style>
 </head>
 
 <body class="h-full bg-gray-50 overflow-hidden">
     <!-- Professional Desktop Application Container -->
-    <div class="h-screen flex flex-col">
-        <!-- Header/Title Bar -->
-        <div class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm">
+    <div class="h-screen flex flex-col">        <!-- Header/Title Bar -->
+        <div class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm drag-region">
             <div class="flex items-center space-x-3">
                 <div class="w-8 h-8 bg-corporate-blue rounded flex items-center justify-center">
                     <span class="text-white font-bold text-sm">SM</span>
@@ -95,10 +100,10 @@
                     <p class="text-gray-500 text-xs">Package Management Tool</p>
                 </div>
             </div>
-            <div class="flex space-x-2">
-                <div class="w-3 h-3 bg-gray-300 rounded-full hover:bg-gray-400 cursor-pointer"></div>
-                <div class="w-3 h-3 bg-gray-300 rounded-full hover:bg-gray-400 cursor-pointer"></div>
-                <div class="w-3 h-3 bg-red-500 rounded-full hover:bg-red-600 cursor-pointer"></div>
+            <div class="flex space-x-2 no-drag">
+                <div class="w-3 h-3 bg-gray-300 rounded-full hover:bg-gray-400 cursor-pointer minimize-btn" title="Minimize"></div>
+                <div class="w-3 h-3 bg-gray-300 rounded-full hover:bg-gray-400 cursor-pointer maximize-btn" title="Maximize"></div>
+                <div class="w-3 h-3 bg-red-500 rounded-full hover:bg-red-600 cursor-pointer close-btn" title="Close"></div>
             </div>
         </div>
 
@@ -479,9 +484,7 @@
                     toggleDot.classList.remove('translate-x-5');
                 }
             });
-        });
-
-        // Initialize the interface
+        });        // Initialize the interface
         document.addEventListener('DOMContentLoaded', function () {
             // Initialize toggles based on checkbox state
             document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
@@ -494,6 +497,35 @@
                     toggleDot.classList.add('translate-x-5');
                 }
             });
+
+            // Window controls functionality
+            const minimizeBtn = document.querySelector('.minimize-btn');
+            const maximizeBtn = document.querySelector('.maximize-btn');
+            const closeBtn = document.querySelector('.close-btn');
+
+            if (minimizeBtn) {
+                minimizeBtn.addEventListener('click', () => {
+                    if (window.electronAPI && window.electronAPI.minimizeWindow) {
+                        window.electronAPI.minimizeWindow();
+                    }
+                });
+            }
+
+            if (maximizeBtn) {
+                maximizeBtn.addEventListener('click', () => {
+                    if (window.electronAPI && window.electronAPI.maximizeWindow) {
+                        window.electronAPI.maximizeWindow();
+                    }
+                });
+            }
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    if (window.electronAPI && window.electronAPI.closeWindow) {
+                        window.electronAPI.closeWindow();
+                    }
+                });
+            }
         });
     </script>
 

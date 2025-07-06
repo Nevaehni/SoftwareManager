@@ -82,7 +82,7 @@ class AppController {
                     { name: 'YAML files', extensions: ['yaml', 'yml'] },
                     { name: 'All files', extensions: ['*'] }
                 ]
-            });            if (result.filePath) {
+            }); if (result.filePath) {
                 this.selectedBundlePath = result.filePath;
                 const selectedFileDiv = document.getElementById('selected-file');
                 const selectedPathElement = document.getElementById('selected-bundle-path');
@@ -146,7 +146,7 @@ class AppController {
             if (!window.electronAPI) {
                 console.error('electronAPI not available');
                 return;
-            }            const enableChoco = document.getElementById('enable-choco')?.checked ?? true;
+            } const enableChoco = document.getElementById('enable-choco')?.checked ?? true;
             const enableWinget = document.getElementById('enable-winget')?.checked ?? true;
 
             const settings = {
@@ -174,7 +174,7 @@ class AppController {
                 return;
             }
 
-            const settings = await window.electronAPI.getSettings();            const enableChocoCheckbox = document.getElementById('enable-choco');
+            const settings = await window.electronAPI.getSettings(); const enableChocoCheckbox = document.getElementById('enable-choco');
             const enableWingetCheckbox = document.getElementById('enable-winget');
 
             if (enableChocoCheckbox) {
@@ -201,17 +201,17 @@ class AppController {
         window.electronAPI.onRestoreProgress((event, data) => {
             this.updateStatus('restore-status', `🔄 ${data.message} (${data.progress}%)`, false);
         });
-    }    updateStatus(elementId, message, isError) {
+    } updateStatus(elementId, message, isError) {
         const element = document.getElementById(elementId);
         if (element) {
             element.textContent = message;
             element.classList.remove('hidden');
-            
+
             // Clear existing classes
-            element.classList.remove('bg-green-50', 'border-green-200', 'text-green-800', 
-                                   'bg-red-50', 'border-red-200', 'text-red-800',
-                                   'bg-blue-50', 'border-blue-200', 'text-blue-800');
-            
+            element.classList.remove('bg-green-50', 'border-green-200', 'text-green-800',
+                'bg-red-50', 'border-red-200', 'text-red-800',
+                'bg-blue-50', 'border-blue-200', 'text-blue-800');
+
             if (isError) {
                 element.classList.add('bg-red-50', 'border-red-200', 'text-red-800');
             } else if (message.includes('✅')) {
