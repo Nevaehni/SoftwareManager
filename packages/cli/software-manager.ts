@@ -2,6 +2,7 @@
 
 import { BackupService } from '../core/src/backup-service';
 import { RestoreService } from '../core/src/restore-service';
+import { PackageManagerInstaller } from '../core/src/package-manager-installer';
 import { WingetAdapter } from '../adapters/windows/winget-adapter';
 import { ChocoAdapter } from '../adapters/windows/choco-adapter';
 import { Settings } from '../core/src/settings';
@@ -13,7 +14,7 @@ import * as path from 'path';
 const execAsync = promisify(exec);
 
 interface CLIOptions {
-    command: 'backup' | 'restore' | 'list' | 'version';
+    command: 'backup' | 'restore' | 'list' | 'version' | 'bootstrap';
     bundlePath?: string;
     enableChoco?: boolean;
     enableWinget?: boolean;
@@ -150,9 +151,7 @@ class SoftwareManagerCLI {
     showVersion(): void {
         console.log('Software Manager CLI v1.0.0');
         console.log('Built with Test-Driven Development');
-    }
-
-    showHelp(): void {
+    } showHelp(): void {
         console.log(`
 Software Manager CLI - Backup and restore your software packages
 
@@ -163,6 +162,7 @@ Commands:
   backup [output]      Create a backup of installed packages (default: software-backup.yaml)
   restore <bundle>     Restore packages from a backup bundle
   list                 List currently installed packages
+  bootstrap            Install missing package managers (Winget/Chocolatey)
   version              Show version information
   help                 Show this help message
 
@@ -175,8 +175,53 @@ Examples:
   software-manager backup my-packages.yaml
   software-manager restore my-packages.yaml
   software-manager list
+  software-manager bootstrap
   software-manager --no-choco backup
         `);
+    }
+
+    async bootstrap(): Promise<void> {
+        console.log('🔧 Checking package manager installation...');
+
+        const installer = new PackageManagerInstaller();
+
+        try {
+            // Check which package managers are missing
+            const missing = await installer.detectMissingManagers();
+
+            if (missing.length === 0) {
+                console.log('✅ All package managers are already installed!');
+                return;
+            }
+
+            console.log(`📦 Missing package managers: ${missing.join(', ')}`);
+
+            // Install missing package managers
+            for (const manager of missing) {
+                console.log(`\n🔄 Installing ${manager}...`);
+
+                let result;
+                if (manager === 'Winget') {
+                    result = await installer.installWinget();
+                } else if (manager === 'Chocolatey') {
+                    result = await installer.installChocolatey();
+                } else {
+                    console.log(`⚠️  Unknown package manager: ${manager}`);
+                    continue;
+                }
+
+                if (result.success) {
+                    console.log(`✅ ${result.message}`);
+                } else {
+                    console.error(`❌ ${result.message}`);
+                }
+            }
+
+            console.log('\n🎉 Bootstrap process completed!');
+        } catch (error) {
+            console.error('❌ Bootstrap failed:', error);
+            throw error;
+        }
     }
 }
 
@@ -218,6 +263,10 @@ async function main() {
 
             case 'version':
                 cli.showVersion();
+                break;
+
+            case 'bootstrap':
+                await cli.bootstrap();
                 break;
 
             default:

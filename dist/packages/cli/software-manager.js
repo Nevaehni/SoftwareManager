@@ -37,6 +37,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SoftwareManagerCLI = void 0;
 const backup_service_1 = require("../core/src/backup-service");
 const restore_service_1 = require("../core/src/restore-service");
+const package_manager_installer_1 = require("../core/src/package-manager-installer");
 const winget_adapter_1 = require("../adapters/windows/winget-adapter");
 const choco_adapter_1 = require("../adapters/windows/choco-adapter");
 const child_process_1 = require("child_process");
@@ -171,6 +172,7 @@ Commands:
   backup [output]      Create a backup of installed packages (default: software-backup.yaml)
   restore <bundle>     Restore packages from a backup bundle
   list                 List currently installed packages
+  bootstrap            Install missing package managers (Winget/Chocolatey)
   version              Show version information
   help                 Show this help message
 
@@ -183,8 +185,48 @@ Examples:
   software-manager backup my-packages.yaml
   software-manager restore my-packages.yaml
   software-manager list
+  software-manager bootstrap
   software-manager --no-choco backup
         `);
+    }
+    async bootstrap() {
+        console.log('🔧 Checking package manager installation...');
+        const installer = new package_manager_installer_1.PackageManagerInstaller();
+        try {
+            // Check which package managers are missing
+            const missing = await installer.detectMissingManagers();
+            if (missing.length === 0) {
+                console.log('✅ All package managers are already installed!');
+                return;
+            }
+            console.log(`📦 Missing package managers: ${missing.join(', ')}`);
+            // Install missing package managers
+            for (const manager of missing) {
+                console.log(`\n🔄 Installing ${manager}...`);
+                let result;
+                if (manager === 'Winget') {
+                    result = await installer.installWinget();
+                }
+                else if (manager === 'Chocolatey') {
+                    result = await installer.installChocolatey();
+                }
+                else {
+                    console.log(`⚠️  Unknown package manager: ${manager}`);
+                    continue;
+                }
+                if (result.success) {
+                    console.log(`✅ ${result.message}`);
+                }
+                else {
+                    console.error(`❌ ${result.message}`);
+                }
+            }
+            console.log('\n🎉 Bootstrap process completed!');
+        }
+        catch (error) {
+            console.error('❌ Bootstrap failed:', error);
+            throw error;
+        }
     }
 }
 exports.SoftwareManagerCLI = SoftwareManagerCLI;
@@ -219,6 +261,9 @@ async function main() {
                 break;
             case 'version':
                 cli.showVersion();
+                break;
+            case 'bootstrap':
+                await cli.bootstrap();
                 break;
             default:
                 console.error(`❌ Unknown command: ${command}`);

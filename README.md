@@ -18,7 +18,7 @@ Built 100 % with **Test-Driven Development (TDD)**, it ships a CLI *and* a moder
 |----------|-----------|-----------------------------|
 | **Backup & Restore** | ✔ Back up installed packages with progress feedback<br>✔ Restore from a bundle | ▢ **Selective config picker** (folders, files, Registry)<br>▢ **Version pinning** per package in backup |
 | **Package Management (daily use)** | — | ▢ In-app **search, install, update, downgrade, uninstall** with version selection |
-| **Package-Manager Bootstrap** | — | ▢ **One-click install** of Winget / Chocolatey when missing |
+| **Package-Manager Bootstrap** | ✔ **One-click install** of Winget / Chocolatey when missing | ▢ Settings UI: **drag-and-drop priority list** of managers |
 | **Priority Ordering** | — | ▢ Settings UI: **drag-and-drop priority list** of managers |
 | **Custom Installer Support** | — | ▢ **Add MSI/EXE** files, include in backup & restore |
 | **Spec Editor** | — | ▢ Built-in **YAML/JSON editor** (Monaco) with schema validation & diff |
@@ -105,6 +105,9 @@ node dist/packages/cli/software-manager.js restore my-backup.yaml
 # List installed packages
 node dist/packages/cli/software-manager.js list
 
+# Install missing package managers
+node dist/packages/cli/software-manager.js bootstrap
+
 # Show version
 node dist/packages/cli/software-manager.js version
 
@@ -137,7 +140,7 @@ The GUI provides:
 
 | ID   | Feature                                              | Status | Test Suite                            |
 |------|------------------------------------------------------|--------|---------------------------------------|
-| F-01 | One-click Winget/Choco bootstrap                      | ❌     | `bootstrap.spec.ts`                   |
+| F-01 | One-click Winget/Choco bootstrap                      | ✅     | `bootstrap.spec.ts`                   |
 | F-02 | Manager priority drag-and-drop                        | ❌     | `settings-priority.e2e.ts`            |
 | F-03 | Search & install packages (UI)                        | ❌     | `packages-search.e2e.ts`<br>`winget-adapter.contract.ts` |
 | F-04 | Update / downgrade with version picker                | ❌     | `version-downgrade.e2e.ts`            |

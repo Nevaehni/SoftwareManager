@@ -13,6 +13,7 @@ declare class SoftwareManagerCLI {
     listPackages(): Promise<void>;
     showVersion(): void;
     showHelp(): void;
+    bootstrap(): Promise<void>;
 }
 export { SoftwareManagerCLI };
 //# sourceMappingURL=software-manager.d.ts.map
