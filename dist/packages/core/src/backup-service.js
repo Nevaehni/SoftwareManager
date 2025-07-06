@@ -62,13 +62,14 @@ class BackupService {
         if (!fs.existsSync('tmp')) {
             fs.mkdirSync('tmp', { recursive: true });
         }
-        this.progressCallback?.(0, 'Starting backup...');
-        // Create combined backup with packages from all enabled adapters
+        this.progressCallback?.(0, 'Starting backup...'); // Create combined backup with packages from all enabled adapters
         let combinedPackages = [];
         const enabledAdapters = this.adapters.filter(config => config.enabled);
-        for (let i = 0; i < enabledAdapters.length; i++) {
-            const config = enabledAdapters[i];
-            const progress = Math.round((i / enabledAdapters.length) * 80); // Reserve 20% for final steps
+        // Sort adapters by priority order if specified in settings
+        const prioritizedAdapters = this.sortAdaptersByPriority(enabledAdapters);
+        for (let i = 0; i < prioritizedAdapters.length; i++) {
+            const config = prioritizedAdapters[i];
+            const progress = Math.round((i / prioritizedAdapters.length) * 80); // Reserve 20% for final steps
             this.progressCallback?.(progress, `Exporting ${config.name} packages...`);
             const tempFile = `tmp/${config.name}-packages.yaml`;
             try {
@@ -113,6 +114,22 @@ class BackupService {
     shouldExport() {
         // Legacy method for backward compatibility
         return this.isAdapterEnabled('winget');
+    }
+    sortAdaptersByPriority(adapters) {
+        if (!this.settings?.packagePriority || this.settings.packagePriority.length === 0) {
+            // No priority specified, return adapters in original order
+            return adapters;
+        }
+        const priorityOrder = this.settings.packagePriority;
+        // Sort adapters according to priority order
+        return adapters.sort((a, b) => {
+            const aIndex = priorityOrder.indexOf(a.name);
+            const bIndex = priorityOrder.indexOf(b.name);
+            // If adapter not in priority list, put it at the end
+            const aPosition = aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex;
+            const bPosition = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex;
+            return aPosition - bPosition;
+        });
     }
 }
 exports.BackupService = BackupService;

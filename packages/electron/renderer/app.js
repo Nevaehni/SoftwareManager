@@ -6,6 +6,8 @@ class AppController {
         this.setupEventListeners();
         this.loadSettings();
         this.setupProgressListeners();
+        this.setupDragAndDrop();
+        this.setupDragAndDrop();
 
         // Auto-test settings save after 3 seconds
         setTimeout(() => {
@@ -146,18 +148,21 @@ class AppController {
             if (!window.electronAPI) {
                 console.error('electronAPI not available');
                 return;
-            }
-
-            const enableChoco = document.getElementById('enable-choco')?.checked ?? true;
+            } const enableChoco = document.getElementById('enable-choco')?.checked ?? true;
             const enableWinget = document.getElementById('enable-winget')?.checked ?? true;
+
+            // Get package priority order from the drag-and-drop list
+            const packagePriority = this.getPackagePriorityOrder();
 
             console.log('Current checkbox values:');
             console.log('  enable-choco checked:', enableChoco);
             console.log('  enable-winget checked:', enableWinget);
+            console.log('  package priority order:', packagePriority);
 
             const settings = {
                 enableChoco,
-                enableWinget
+                enableWinget,
+                packagePriority
             };
 
             console.log('Settings object to save:', settings);
@@ -195,11 +200,16 @@ class AppController {
                 enableChocoCheckbox.checked = settings.enableChoco !== false;
                 console.log('  Set enable-choco to:', enableChocoCheckbox.checked);
                 this.updateToggleAppearance(enableChocoCheckbox);
-            }
-            if (enableWingetCheckbox) {
+            } if (enableWingetCheckbox) {
                 enableWingetCheckbox.checked = settings.enableWinget !== false;
                 console.log('  Set enable-winget to:', enableWingetCheckbox.checked);
                 this.updateToggleAppearance(enableWingetCheckbox);
+            }
+
+            // Load package priority order
+            if (settings.packagePriority) {
+                this.setPackagePriorityOrder(settings.packagePriority);
+                console.log('  Set package priority to:', settings.packagePriority);
             }
         } catch (error) {
             console.error('Load settings error:', error);
@@ -259,6 +269,112 @@ class AppController {
         } else {
             console.error('Could not find toggle elements for:', checkbox.id);
         }
+    } setupDragAndDrop() {
+        const priorityList = document.getElementById('package-priority-list');
+        if (!priorityList) return;
+
+        let draggedElement = null;
+
+        // Add event listeners to all priority items
+        const items = priorityList.querySelectorAll('.priority-item');
+        items.forEach(item => {
+            item.addEventListener('dragstart', (e) => {
+                draggedElement = item;
+                item.classList.add('opacity-50');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', item.outerHTML);
+            });
+
+            item.addEventListener('dragend', (e) => {
+                item.classList.remove('opacity-50');
+                draggedElement = null;
+
+                // Clean up any drop zone indicators
+                const allItems = priorityList.querySelectorAll('.priority-item');
+                allItems.forEach(item => {
+                    item.classList.remove('border-blue-500', 'border-2');
+                });
+            });
+
+            item.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                if (draggedElement && draggedElement !== item) {
+                    item.classList.add('border-blue-500', 'border-2');
+                }
+            });
+
+            item.addEventListener('dragleave', (e) => {
+                // Only remove border if we're actually leaving the item
+                if (!item.contains(e.relatedTarget)) {
+                    item.classList.remove('border-blue-500', 'border-2');
+                }
+            });
+
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                item.classList.remove('border-blue-500', 'border-2');
+
+                if (draggedElement && draggedElement !== item) {
+                    const rect = item.getBoundingClientRect();
+                    const midpoint = rect.top + rect.height / 2;
+
+                    if (e.clientY < midpoint) {
+                        // Insert before current item
+                        priorityList.insertBefore(draggedElement, item);
+                    } else {
+                        // Insert after current item
+                        priorityList.insertBefore(draggedElement, item.nextSibling);
+                    }
+                }
+            });
+        });
+
+        // Also allow dropping on the container itself
+        priorityList.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        priorityList.addEventListener('drop', (e) => {
+            e.preventDefault();
+            // If dropped on empty space, add to the end
+            if (draggedElement && e.target === priorityList) {
+                priorityList.appendChild(draggedElement);
+            }
+        });
+    } getPackagePriorityOrder() {
+        const priorityList = document.getElementById('package-priority-list');
+        if (!priorityList) return ['winget', 'chocolatey']; // Default order
+
+        const items = priorityList.querySelectorAll('.priority-item');
+        return Array.from(items).map(item => item.dataset.manager);
+    } setPackagePriorityOrder(priorityOrder) {
+        const priorityList = document.getElementById('package-priority-list');
+        if (!priorityList || !priorityOrder) return;
+
+        // Get all current items
+        const items = Array.from(priorityList.querySelectorAll('.priority-item'));
+
+        // Clear the list
+        priorityList.innerHTML = '';
+
+        // Re-add items in the specified order
+        priorityOrder.forEach(managerName => {
+            const item = items.find(item => item.dataset.manager === managerName);
+            if (item) {
+                priorityList.appendChild(item);
+            }
+        });
+
+        // Re-setup drag and drop after reordering
+        setTimeout(() => {
+            this.setupDragAndDrop();
+        }, 100);
     }
 }
 

@@ -13,6 +13,7 @@ export declare class BackupService {
     run(): Promise<void>;
     private isAdapterEnabled;
     private shouldExport;
+    private sortAdaptersByPriority;
 }
 export {};
 //# sourceMappingURL=backup-service.d.ts.map

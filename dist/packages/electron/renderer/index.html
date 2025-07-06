@@ -351,6 +351,48 @@
                                                 large software library</p>
                                         </div>
                                     </label>
+                                </div>                            </div>
+
+                            <!-- Package Manager Priority Section -->
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <h3 class="font-medium text-gray-900 mb-4">Package Manager Priority</h3>
+                                <p class="text-gray-600 text-sm mb-4">Drag to reorder package managers by priority. Higher items will be processed first during backup operations.</p>
+                                
+                                <div id="package-priority-list" class="space-y-2">
+                                    <!-- Priority items will be dynamically populated -->
+                                    <div class="priority-item bg-white rounded-md p-3 border border-gray-200 cursor-move hover:bg-gray-50 transition-colors" data-manager="winget" draggable="true">
+                                        <div class="flex items-center space-x-3">
+                                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V6a2 2 0 012-2h2M4 16v2a2 2 0 002 2h2M16 4h2a2 2 0 012 2v2M16 20h2a2 2 0 01-2 2v-2a2 2 0 00-2-2z"></path>
+                                            </svg>
+                                            <div class="flex-1">
+                                                <span class="font-medium text-gray-900">Winget</span>
+                                                <p class="text-xs text-gray-500">Windows Package Manager</p>
+                                            </div>
+                                            <div class="drag-handle text-gray-400 hover:text-gray-600">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="priority-item bg-white rounded-md p-3 border border-gray-200 cursor-move hover:bg-gray-50 transition-colors" data-manager="chocolatey" draggable="true">
+                                        <div class="flex items-center space-x-3">
+                                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                            </svg>
+                                            <div class="flex-1">
+                                                <span class="font-medium text-gray-900">Chocolatey</span>
+                                                <p class="text-xs text-gray-500">Package Manager for Windows</p>
+                                            </div>
+                                            <div class="drag-handle text-gray-400 hover:text-gray-600">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
