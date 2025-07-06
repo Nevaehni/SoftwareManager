@@ -7,10 +7,11 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     backupPackages: () => electron_1.ipcRenderer.invoke('backup-packages'),
     restorePackages: (bundlePath) => electron_1.ipcRenderer.invoke('restore-packages', bundlePath),
     getSettings: () => electron_1.ipcRenderer.invoke('get-settings'),
-    saveSettings: (settings) => electron_1.ipcRenderer.invoke('save-settings', settings),
-    // File system operations
+    saveSettings: (settings) => electron_1.ipcRenderer.invoke('save-settings', settings), // File system operations
     selectFile: (options) => electron_1.ipcRenderer.invoke('select-file', options),
-    selectDirectory: () => electron_1.ipcRenderer.invoke('select-directory'), // Package management
+    selectDirectory: () => electron_1.ipcRenderer.invoke('select-directory'),
+    selectCustomInstaller: () => electron_1.ipcRenderer.invoke('select-custom-installer'),
+    downloadCustomInstaller: (url) => electron_1.ipcRenderer.invoke('download-custom-installer', url), // Package management
     searchPackages: (query) => electron_1.ipcRenderer.invoke('search-packages', query),
     installPackage: (packageId, source, version) => electron_1.ipcRenderer.invoke('install-package', packageId, source, version),
     uninstallPackage: (packageId, source) => electron_1.ipcRenderer.invoke('uninstall-package', packageId, source),

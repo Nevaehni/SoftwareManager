@@ -30,6 +30,25 @@ Built 100 % with **Test-Driven Development (TDD)**, it ships a CLI *and* a moder
 
 ### 🔧 Recent Implementation Notes
 
+**F-05: Add custom MSI/EXE to bundle - COMPLETED** ✅  
+The custom installer functionality has been fully implemented and tested with comprehensive URL download support. Key technical solutions:
+
+- **CustomInstallerService**: Core service for managing MSI/EXE files with validation, bundling, and installation capabilities
+- **File Sources**: Supports both local file selection and URL downloads from HTTP/HTTPS sources
+- **File Validation**: Supports MSI and EXE files with size limits (500MB), extension validation, and content-length checks for downloads
+- **URL Download Engine**: Built-in HTTP/HTTPS download with progress tracking, error handling, and temporary file management
+- **Backup Integration**: Custom installers are automatically included in backup bundles with manifest tracking
+- **Enhanced UI**: Dual-mode interface with "Browse Files" for local selection and "Add URL" for download functionality
+- **IPC Architecture**: Secure file operations and URL downloads through main process with validation and error handling
+- **Installation Support**: Automatic silent installation during restore using msiexec for MSI and common flags for EXE
+- **Manifest System**: JSON-based tracking with downloadUrl field for URL-sourced installers
+
+Users can now add custom MSI/EXE installers to their backup bundles through two methods:
+1. **Local File Selection**: Browse and select MSI/EXE files from the local filesystem
+2. **URL Download**: Enter direct download URLs for MSI/EXE files which are automatically downloaded and validated
+
+The system validates all installers, tracks their source (file path or download URL), and includes them in backup manifests. During restore operations, these custom installers can be automatically executed using appropriate silent installation methods.
+
 **F-04: Uninstall packages with UI - COMPLETED** ✅  
 The package uninstall functionality has been fully implemented and tested. Key technical solutions:
 
@@ -182,7 +201,7 @@ The GUI provides:
 | F-02 | Manager priority drag-and-drop                        | ✅     | `settings-priority.e2e.ts`            |
 | F-03 | Search & install packages (UI)                        | ✅     | `packages-search.e2e.ts`<br>`winget-adapter.contract.ts` |
 | F-04 | Uninstall packages with UI                            | ✅     | `package-uninstall.spec.ts`          |
-| F-05 | Add custom MSI/EXE to bundle                          | ❌     | `msi-ingest.spec.ts`                  |
+| F-05 | Add custom MSI/EXE to bundle                          | ✅     | `msi-ingest.spec.ts`                  |
 | F-06 | YAML/JSON editor with validation                      | ❌     | `editor.spec.ts`                      |
 | F-07 | Console/log viewer (toggle, copy, filter)             | ❌     | `console-pane.spec.ts`                |
 | F-08 | Selective config backup (files/registry)              | ❌     | `config-picker.e2e.ts`                |

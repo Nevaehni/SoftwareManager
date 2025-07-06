@@ -6,11 +6,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     backupPackages: () => ipcRenderer.invoke('backup-packages'),
     restorePackages: (bundlePath: string) => ipcRenderer.invoke('restore-packages', bundlePath),
     getSettings: () => ipcRenderer.invoke('get-settings'),
-    saveSettings: (settings: any) => ipcRenderer.invoke('save-settings', settings),
-
-    // File system operations
+    saveSettings: (settings: any) => ipcRenderer.invoke('save-settings', settings),    // File system operations
     selectFile: (options: any) => ipcRenderer.invoke('select-file', options),
-    selectDirectory: () => ipcRenderer.invoke('select-directory'),    // Package management
+    selectDirectory: () => ipcRenderer.invoke('select-directory'),
+    selectCustomInstaller: () => ipcRenderer.invoke('select-custom-installer'),
+    downloadCustomInstaller: (url: string) => ipcRenderer.invoke('download-custom-installer', url),// Package management
     searchPackages: (query: string) => ipcRenderer.invoke('search-packages', query),
     installPackage: (packageId: string, source: string, version?: string) => ipcRenderer.invoke('install-package', packageId, source, version),
     uninstallPackage: (packageId: string, source: string) => ipcRenderer.invoke('uninstall-package', packageId, source),

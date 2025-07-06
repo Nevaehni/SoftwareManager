@@ -5,7 +5,9 @@ import { RestoreService } from '../../core/src/restore-service';
 import { WingetAdapter } from '../../adapters/windows/winget-adapter';
 import { ChocoAdapter } from '../../adapters/windows/choco-adapter';
 import { Settings } from '../../core/src/settings';
+import { CustomInstallerService } from '../../core/src/custom-installer-service';
 import * as fs from 'fs';
+import * as os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -181,7 +183,57 @@ function setupIpcHandlers(): void {    // Backup packages
             console.error('File selection failed:', error);
             return { filePath: null, error: error instanceof Error ? error.message : 'Unknown error' };
         }
-    });    // Directory selection
+    });
+
+    // Custom installer file selection
+    ipcMain.handle('select-custom-installer', async () => {
+        try {
+            const result = await dialog.showOpenDialog(mainWindow!, {
+                properties: ['openFile'],
+                filters: [
+                    { name: 'Installer files', extensions: ['msi', 'exe'] },
+                    { name: 'MSI files', extensions: ['msi'] },
+                    { name: 'EXE files', extensions: ['exe'] },
+                    { name: 'All files', extensions: ['*'] }
+                ]
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+                const filePath = result.filePaths[0];
+
+                // Validate file extension
+                const ext = path.extname(filePath).toLowerCase();
+                if (!['.msi', '.exe'].includes(ext)) {
+                    return {
+                        success: false,
+                        error: 'Only MSI and EXE files are supported'
+                    };
+                }
+
+                // Check file size (500MB limit)
+                const stats = fs.statSync(filePath);
+                const maxSize = 500 * 1024 * 1024; // 500MB
+                if (stats.size > maxSize) {
+                    return {
+                        success: false,
+                        error: 'File size exceeds maximum limit of 500MB'
+                    };
+                }
+
+                return { success: true, filePath };
+            }
+
+            return { success: true, cancelled: true };
+        } catch (error) {
+            console.error('Custom installer selection failed:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
+        }
+    });
+
+    // Directory selection
     ipcMain.handle('select-directory', async () => {
         try {
             const result = await dialog.showOpenDialog(mainWindow!, {
@@ -380,6 +432,33 @@ function setupIpcHandlers(): void {    // Backup packages
     ipcMain.handle('close-window', () => {
         if (mainWindow) {
             mainWindow.close();
+        }
+    });
+
+    // Custom installer URL download
+    ipcMain.handle('download-custom-installer', async (event, url: string) => {
+        try {
+            console.log('Downloading custom installer from URL:', url);
+
+            // Create a temporary directory for downloads
+            const tempDir = path.join(os.tmpdir(), 'software-manager', 'downloads');
+            await fs.promises.mkdir(tempDir, { recursive: true });
+
+            // Use the custom installer service to download
+            const customInstallerService = new CustomInstallerService();
+            const result = await customInstallerService.downloadInstaller(url, tempDir);
+
+            if (result.success) {
+                return { success: true, filePath: result.installerPath };
+            } else {
+                return { success: false, error: result.error };
+            }
+        } catch (error) {
+            console.error('Error downloading custom installer:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
         }
     });
 }

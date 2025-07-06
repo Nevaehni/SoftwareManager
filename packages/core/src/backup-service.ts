@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import { PackageAdapter } from './package-adapter';
 import { Settings } from './settings';
+import { CustomInstallerService } from './custom-installer-service';
 
 interface AdapterConfig {
     name: string;
@@ -17,6 +18,8 @@ export class BackupService {
     private adapters: AdapterConfig[] = [];
     private settings?: Settings;
     private progressCallback?: ProgressCallback;
+    private customInstallerService: CustomInstallerService;
+    private customInstallers: string[] = [];
 
     constructor(adapter?: PackageAdapter, settings?: Settings) {
         // Maintain backward compatibility
@@ -28,18 +31,31 @@ export class BackupService {
             });
         }
         this.settings = settings;
+        this.customInstallerService = new CustomInstallerService();
     }
 
     setProgressCallback(callback: ProgressCallback): void {
         this.progressCallback = callback;
-    }
-
-    addAdapter(name: string, adapter: PackageAdapter): void {
+    } addAdapter(name: string, adapter: PackageAdapter): void {
         this.adapters.push({
             name,
             adapter,
             enabled: this.isAdapterEnabled(name)
         });
+    }
+
+    /**
+     * Add a custom MSI/EXE installer to be included in the backup
+     */
+    addCustomInstaller(installerPath: string): void {
+        this.customInstallers.push(installerPath);
+    }
+
+    /**
+     * Get list of custom installers to be included in backup
+     */
+    getCustomInstallers(): string[] {
+        return [...this.customInstallers];
     } async run(): Promise<void> {
         if (!fs.existsSync('tmp')) {
             fs.mkdirSync('tmp', { recursive: true });
@@ -75,7 +91,35 @@ export class BackupService {
             }
         }
 
-        this.progressCallback?.(90, 'Finalizing backup...');        // Write combined output
+        this.progressCallback?.(90, 'Adding custom installers...');
+
+        // Add custom installers to backup if any were specified
+        if (this.customInstallers.length > 0) {
+            const customInstallersDir = 'tmp/custom-installers';
+
+            for (const installerPath of this.customInstallers) {
+                try {
+                    const result = await this.customInstallerService.addInstallerToBundle(
+                        installerPath,
+                        customInstallersDir
+                    );
+                    if (!result.success) {
+                        console.warn(`Failed to add custom installer ${installerPath}:`, result.error);
+                    }
+                } catch (error) {
+                    console.warn(`Failed to add custom installer ${installerPath}:`, error);
+                }
+            }
+
+            // Add reference to custom installers in the spec file
+            if (fs.existsSync(`${customInstallersDir}/custom-installers.json`)) {
+                combinedPackages.push('# CUSTOM INSTALLERS');
+                combinedPackages.push('# See custom-installers/ directory for MSI/EXE files');
+                combinedPackages.push('');
+            }
+        }
+
+        this.progressCallback?.(95, 'Finalizing backup...');        // Write combined output
         const finalContent = combinedPackages.join('\n');
 
         // Ensure tmp directory exists

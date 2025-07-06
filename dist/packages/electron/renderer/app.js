@@ -247,6 +247,30 @@ class AppController {
         const saveSettingsBtn = document.getElementById('save-settings-btn');
         if (saveSettingsBtn) {
             saveSettingsBtn.addEventListener('click', () => this.handleSaveSettings());
+        }        // Custom installer functionality
+        const addCustomInstallerBtn = document.getElementById('add-custom-installer-btn');
+        if (addCustomInstallerBtn) {
+            addCustomInstallerBtn.addEventListener('click', () => this.handleAddCustomInstaller());
+        }
+
+        const addUrlInstallerBtn = document.getElementById('add-url-installer-btn');
+        if (addUrlInstallerBtn) {
+            addUrlInstallerBtn.addEventListener('click', () => this.showUrlDialog());
+        }
+
+        const closeUrlDialogBtn = document.getElementById('close-url-dialog-btn');
+        if (closeUrlDialogBtn) {
+            closeUrlDialogBtn.addEventListener('click', () => this.hideUrlDialog());
+        }
+
+        const cancelUrlBtn = document.getElementById('cancel-url-btn');
+        if (cancelUrlBtn) {
+            cancelUrlBtn.addEventListener('click', () => this.hideUrlDialog());
+        }
+
+        const downloadInstallerBtn = document.getElementById('download-installer-btn');
+        if (downloadInstallerBtn) {
+            downloadInstallerBtn.addEventListener('click', () => this.handleDownloadInstaller());
         }
     }
 
@@ -611,10 +635,186 @@ class AppController {
 
         // Add scroll listener to update indicator
         element.removeEventListener('scroll', updateScrollIndicator);
-        element.addEventListener('scroll', updateScrollIndicator);
-
-        // Initial check
+        element.addEventListener('scroll', updateScrollIndicator);        // Initial check
         updateScrollIndicator();
+    }    // Custom installer functionality
+    async handleAddCustomInstaller() {
+        try {
+            console.log('Add custom installer button clicked');
+
+            if (!window.electronAPI) {
+                console.error('electronAPI not available');
+                this.updateCustomInstallerStatus('❌ Application error: electronAPI not available', true);
+                return;
+            }
+
+            // Open file dialog for MSI/EXE files
+            const result = await window.electronAPI.selectCustomInstaller();
+
+            if (result.success && result.filePath) {
+                this.addCustomInstallerToList(result.filePath, 'file');
+                this.updateCustomInstallerStatus('✅ Custom installer added successfully', false);
+            } else if (result.cancelled) {
+                // User cancelled, no error
+                this.updateCustomInstallerStatus('', false);
+            } else {
+                this.updateCustomInstallerStatus(`❌ Failed to add installer: ${result.error || 'Unknown error'}`, true);
+            }
+        } catch (error) {
+            console.error('Add custom installer error:', error);
+            this.updateCustomInstallerStatus(`❌ Failed to add installer: ${error.message}`, true);
+        }
+    }
+
+    showUrlDialog() {
+        const dialog = document.getElementById('url-input-dialog');
+        const urlInput = document.getElementById('installer-url-input');
+
+        if (dialog && urlInput) {
+            dialog.classList.remove('hidden');
+            urlInput.focus();
+            urlInput.value = '';
+        }
+    }
+
+    hideUrlDialog() {
+        const dialog = document.getElementById('url-input-dialog');
+        if (dialog) {
+            dialog.classList.add('hidden');
+        }
+    }
+
+    async handleDownloadInstaller() {
+        try {
+            const urlInput = document.getElementById('installer-url-input');
+            const downloadBtn = document.getElementById('download-installer-btn');
+
+            if (!urlInput || !urlInput.value.trim()) {
+                this.updateCustomInstallerStatus('❌ Please enter a valid URL', true);
+                return;
+            }
+
+            const url = urlInput.value.trim();
+
+            // Basic URL validation
+            try {
+                new URL(url);
+            } catch (e) {
+                this.updateCustomInstallerStatus('❌ Invalid URL format', true);
+                return;
+            }
+
+            // Check if URL ends with .msi or .exe
+            const urlPath = new URL(url).pathname.toLowerCase();
+            if (!urlPath.endsWith('.msi') && !urlPath.endsWith('.exe')) {
+                this.updateCustomInstallerStatus('❌ URL must point to an MSI or EXE file', true);
+                return;
+            }
+
+            if (!window.electronAPI) {
+                console.error('electronAPI not available');
+                this.updateCustomInstallerStatus('❌ Application error: electronAPI not available', true);
+                return;
+            }
+
+            // Disable button and show progress
+            if (downloadBtn) downloadBtn.disabled = true;
+            this.updateCustomInstallerStatus('🔄 Downloading installer...', false);
+
+            console.log('Downloading installer from URL:', url);
+            const result = await window.electronAPI.downloadCustomInstaller(url);
+
+            if (result.success && result.filePath) {
+                this.addCustomInstallerToList(result.filePath, 'url', url);
+                this.updateCustomInstallerStatus('✅ Installer downloaded successfully', false);
+                this.hideUrlDialog();
+            } else {
+                this.updateCustomInstallerStatus(`❌ Failed to download installer: ${result.error || 'Unknown error'}`, true);
+            }
+        } catch (error) {
+            console.error('Download installer error:', error);
+            this.updateCustomInstallerStatus(`❌ Failed to download installer: ${error.message}`, true);
+        } finally {
+            const downloadBtn = document.getElementById('download-installer-btn');
+            if (downloadBtn) downloadBtn.disabled = false;
+        }
+    } addCustomInstallerToList(filePath, source = 'file', originalUrl = null) {
+        const fileName = filePath.split('\\').pop() || filePath.split('/').pop();
+        const listContainer = document.getElementById('custom-installer-list');
+        const emptyState = document.getElementById('custom-installer-empty');
+
+        // Hide empty state
+        if (emptyState) {
+            emptyState.style.display = 'none';
+        }
+
+        // Create installer item
+        const installerItem = document.createElement('div');
+        installerItem.className = 'flex items-center justify-between bg-white p-3 rounded border border-gray-200 mb-2';
+
+        const sourceIcon = source === 'url' ?
+            `<svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+            </svg>` :
+            `<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>`;
+
+        const sourcePath = source === 'url' && originalUrl ? originalUrl : filePath;
+        const sourceLabel = source === 'url' ? 'Downloaded from' : 'Local file';
+
+        installerItem.innerHTML = `
+            <div class="flex items-center space-x-3">
+                ${sourceIcon}
+                <div>
+                    <p class="font-medium text-gray-900 text-sm">${fileName}</p>
+                    <p class="text-gray-500 text-xs">${sourceLabel}: ${sourcePath}</p>
+                </div>
+            </div>
+            <button class="text-red-600 hover:text-red-800 p-1" onclick="this.parentElement.remove(); appController.checkCustomInstallerEmpty()">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        `;
+
+        listContainer.appendChild(installerItem);
+    }
+
+    checkCustomInstallerEmpty() {
+        const listContainer = document.getElementById('custom-installer-list');
+        const emptyState = document.getElementById('custom-installer-empty');
+        const installerItems = listContainer.querySelectorAll('.flex.items-center.justify-between');
+
+        if (installerItems.length === 0) {
+            emptyState.style.display = 'block';
+        }
+    }
+
+    updateCustomInstallerStatus(message, isError) {
+        const statusElement = document.getElementById('custom-installer-status');
+        if (!statusElement) return;
+
+        if (!message) {
+            statusElement.classList.add('hidden');
+            return;
+        }
+
+        statusElement.textContent = message;
+        statusElement.classList.remove('hidden');
+
+        if (isError) {
+            statusElement.className = 'mt-3 p-3 rounded-lg border bg-red-50 border-red-200 text-red-800';
+        } else {
+            statusElement.className = 'mt-3 p-3 rounded-lg border bg-green-50 border-green-200 text-green-800';
+        }
+
+        // Auto-hide success messages after 3 seconds
+        if (!isError) {
+            setTimeout(() => {
+                statusElement.classList.add('hidden');
+            }, 3000);
+        }
     }
 }
 

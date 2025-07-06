@@ -35,9 +35,11 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BackupService = void 0;
 const fs = __importStar(require("fs"));
+const custom_installer_service_1 = require("./custom-installer-service");
 class BackupService {
     constructor(adapter, settings) {
         this.adapters = [];
+        this.customInstallers = [];
         // Maintain backward compatibility
         if (adapter) {
             this.adapters.push({
@@ -47,6 +49,7 @@ class BackupService {
             });
         }
         this.settings = settings;
+        this.customInstallerService = new custom_installer_service_1.CustomInstallerService();
     }
     setProgressCallback(callback) {
         this.progressCallback = callback;
@@ -57,6 +60,18 @@ class BackupService {
             adapter,
             enabled: this.isAdapterEnabled(name)
         });
+    }
+    /**
+     * Add a custom MSI/EXE installer to be included in the backup
+     */
+    addCustomInstaller(installerPath) {
+        this.customInstallers.push(installerPath);
+    }
+    /**
+     * Get list of custom installers to be included in backup
+     */
+    getCustomInstallers() {
+        return [...this.customInstallers];
     }
     async run() {
         if (!fs.existsSync('tmp')) {
@@ -88,7 +103,29 @@ class BackupService {
                 console.warn(`Failed to export from ${config.name}:`, error);
             }
         }
-        this.progressCallback?.(90, 'Finalizing backup...'); // Write combined output
+        this.progressCallback?.(90, 'Adding custom installers...');
+        // Add custom installers to backup if any were specified
+        if (this.customInstallers.length > 0) {
+            const customInstallersDir = 'tmp/custom-installers';
+            for (const installerPath of this.customInstallers) {
+                try {
+                    const result = await this.customInstallerService.addInstallerToBundle(installerPath, customInstallersDir);
+                    if (!result.success) {
+                        console.warn(`Failed to add custom installer ${installerPath}:`, result.error);
+                    }
+                }
+                catch (error) {
+                    console.warn(`Failed to add custom installer ${installerPath}:`, error);
+                }
+            }
+            // Add reference to custom installers in the spec file
+            if (fs.existsSync(`${customInstallersDir}/custom-installers.json`)) {
+                combinedPackages.push('# CUSTOM INSTALLERS');
+                combinedPackages.push('# See custom-installers/ directory for MSI/EXE files');
+                combinedPackages.push('');
+            }
+        }
+        this.progressCallback?.(95, 'Finalizing backup...'); // Write combined output
         const finalContent = combinedPackages.join('\n');
         // Ensure tmp directory exists
         if (!fs.existsSync('tmp')) {
