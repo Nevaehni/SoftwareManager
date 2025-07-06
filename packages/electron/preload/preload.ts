@@ -10,11 +10,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // File system operations
     selectFile: (options: any) => ipcRenderer.invoke('select-file', options),
-    selectDirectory: () => ipcRenderer.invoke('select-directory'),
-
-    // Package management
+    selectDirectory: () => ipcRenderer.invoke('select-directory'),    // Package management
     searchPackages: (query: string) => ipcRenderer.invoke('search-packages', query),
     installPackage: (packageId: string, source: string, version?: string) => ipcRenderer.invoke('install-package', packageId, source, version),
+    uninstallPackage: (packageId: string, source: string) => ipcRenderer.invoke('uninstall-package', packageId, source),
+    listInstalledPackages: () => ipcRenderer.invoke('list-installed-packages'),
 
     // Window controls
     minimizeWindow: () => ipcRenderer.invoke('minimize-window'),

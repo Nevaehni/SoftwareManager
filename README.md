@@ -17,7 +17,7 @@ Built 100 % with **Test-Driven Development (TDD)**, it ships a CLI *and* a moder
 | Category | Delivered | Missing → must ship in v1.0 |
 |----------|-----------|-----------------------------|
 | **Backup & Restore** | ✔ Back up installed packages with progress feedback<br>✔ Restore from a bundle | ▢ **Selective config picker** (folders, files, Registry)<br>▢ **Version pinning** per package in backup |
-| **Package Management (daily use)** | ✔ **Search & install packages** with UI<br>✔ **Winget & Chocolatey integration** | ▢ Uninstall packages with UI |
+| **Package Management (daily use)** | ✔ **Search & install packages** with UI<br>✔ **Uninstall packages with UI**<br>✔ **Winget & Chocolatey integration** | — |
 | **Package-Manager Bootstrap** | ✔ **One-click install** of Winget / Chocolatey when missing | ▢ Settings UI: **drag-and-drop priority list** of managers |
 | **Priority Ordering** | ✔ Settings UI: **drag-and-drop priority list** of managers | — |
 | **Custom Installer Support** | — | ▢ **Add MSI/EXE** files, include in backup & restore |
@@ -29,6 +29,18 @@ Built 100 % with **Test-Driven Development (TDD)**, it ships a CLI *and* a moder
 | **E2E Coverage** | 🕒 Planned | ▢ Playwright tests for all the above |
 
 ### 🔧 Recent Implementation Notes
+
+**F-04: Uninstall packages with UI - COMPLETED** ✅  
+The package uninstall functionality has been fully implemented and tested. Key technical solutions:
+
+- **Adapter Extension**: Added `uninstall()` method to `PackageAdapter` interface and implemented in both WingetAdapter and ChocoAdapter
+- **UI Enhancement**: Extended package management UI with tabbed interface - "Search & Install" and "Installed Packages" views
+- **IPC Integration**: Added `uninstall-package` and `list-installed-packages` IPC handlers in main process
+- **E2E Testing**: Comprehensive E2E tests covering tab navigation, package listing, and uninstall functionality
+- **Error Handling**: Proper status feedback and error handling for uninstall operations
+- **Scrollable Lists**: Added responsive scrolling to package lists with visual indicators when content overflows
+
+Users can now view installed packages, navigate between search and installed views, and uninstall packages directly from the UI with real-time feedback. Package lists automatically become scrollable when containing many items with adaptive height constraints.
 
 **F-03: Search & Install Packages (UI) - COMPLETED** ✅  
 The package search functionality has been fully implemented and tested. Key technical solutions:
@@ -155,7 +167,7 @@ The GUI provides:
 | F-01 | One-click Winget/Choco bootstrap                      | ✅     | `bootstrap.spec.ts`                   |
 | F-02 | Manager priority drag-and-drop                        | ✅     | `settings-priority.e2e.ts`            |
 | F-03 | Search & install packages (UI)                        | ✅     | `packages-search.e2e.ts`<br>`winget-adapter.contract.ts` |
-| F-04 | Uninstall packages with UI                            | ❌     | `package-uninstall.e2e.ts`           |
+| F-04 | Uninstall packages with UI                            | ✅     | `package-uninstall.spec.ts`          |
 | F-05 | Add custom MSI/EXE to bundle                          | ❌     | `msi-ingest.spec.ts`                  |
 | F-06 | YAML/JSON editor with validation                      | ❌     | `editor.spec.ts`                      |
 | F-07 | Console/log viewer (toggle, copy, filter)             | ❌     | `console-pane.spec.ts`                |

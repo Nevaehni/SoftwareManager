@@ -97,6 +97,14 @@ export class ChocoAdapter implements PackageAdapter {
         return result.exitCode === 0;
     }
 
+    async uninstall(packageId: string): Promise<boolean> {
+        this.validateExecFunction();
+
+        const result = await this.execFunction!('choco', ['uninstall', packageId, '-y']);
+
+        return result.exitCode === 0;
+    }
+
     async ensurePresent(packageId: string): Promise<boolean> {
         this.validateExecFunction();
 

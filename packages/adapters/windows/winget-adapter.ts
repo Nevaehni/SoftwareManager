@@ -143,6 +143,14 @@ export class WingetAdapter implements PackageAdapter {
         return result.exitCode === 0;
     }
 
+    async uninstall(packageId: string): Promise<boolean> {
+        this.validateExecFunction();
+
+        const result = await this.execFunction!('winget', ['uninstall', packageId, '--accept-source-agreements']);
+
+        return result.exitCode === 0;
+    }
+
     async ensurePresent(packageId: string): Promise<boolean> {
         this.validateExecFunction();
 
@@ -151,6 +159,25 @@ export class WingetAdapter implements PackageAdapter {
             return result.exitCode === 0;
         } catch (error) {
             return false;
+        }
+    }
+
+    async listInstalled(): Promise<PackageInfo[]> {
+        this.validateExecFunction();
+
+        const result = await this.execFunction!('winget', ['list', '--accept-source-agreements']);
+
+        if (result.exitCode !== 0) {
+            throw new Error(`Winget list failed: ${result.stderr}`);
+        }
+
+        try {
+            // Parse the table output instead of expecting JSON
+            const packages = this.parseWingetSearchOutput(result.stdout);
+            return packages;
+        } catch (error) {
+            console.error('Failed to parse winget list output:', error);
+            throw new Error(`Failed to parse winget list output: ${error}`);
         }
     }
 

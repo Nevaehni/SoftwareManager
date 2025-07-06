@@ -26,4 +26,22 @@
     .status-info {
         @apply bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-lg;
     }
+
+    .package-tab {
+        @apply whitespace-nowrap py-4 px-1 border-b-2 border-transparent font-medium text-sm cursor-pointer;
+        @apply text-gray-500 hover:text-gray-700 hover:border-gray-300;
+        @apply transition-colors duration-200 flex items-center space-x-2;
+    }
+
+    .package-tab.active {
+        @apply border-blue-500 text-blue-600;
+    }
+
+    .package-view {
+        @apply transition-all duration-300;
+    }
+
+    .package-view.hidden {
+        @apply opacity-0 pointer-events-none;
+    }
 }

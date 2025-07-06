@@ -70,11 +70,11 @@ vscode|1.85.0`;
             const result = await adapter.search('nodejs');
 
             expect(mockExec).toHaveBeenCalledWith('choco', ['search', 'nodejs', '--limit-output']);
-            expect(result).toHaveLength(3);
-            expect(result[0]).toEqual({
+            expect(result).toHaveLength(3); expect(result[0]).toEqual({
                 id: 'nodejs',
                 name: 'nodejs',
                 version: '20.10.0',
+                source: 'chocolatey'
             });
         });
 
@@ -128,6 +128,33 @@ vscode|1.85.0`;
             });
 
             const result = await adapter.install('nonexistent');
+
+            expect(result).toBe(false);
+        });
+
+        test('Choco_uninstall_package', async () => {
+            // Red phase: Test that uninstall calls choco uninstall command
+            mockExec.mockResolvedValue({
+                stdout: 'Package uninstalled successfully',
+                stderr: '',
+                exitCode: 0,
+            });
+
+            const result = await adapter.uninstall('nodejs');
+
+            expect(mockExec).toHaveBeenCalledWith('choco', ['uninstall', 'nodejs', '-y']);
+            expect(result).toBe(true);
+        });
+
+        test('Choco_uninstall_returns_false_on_failure', async () => {
+            // Test that uninstall returns false when command fails
+            mockExec.mockResolvedValue({
+                stdout: '',
+                stderr: 'Uninstall failed',
+                exitCode: 1,
+            });
+
+            const result = await adapter.uninstall('nonexistent');
 
             expect(result).toBe(false);
         });

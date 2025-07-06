@@ -1,4 +1,1 @@
 packages:
-  - id: Test.Package
-    name: Test Package
-    version: 1.0.0

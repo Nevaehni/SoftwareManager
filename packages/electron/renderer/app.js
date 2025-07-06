@@ -7,6 +7,7 @@ class AppController {
         this.loadSettings();
         this.setupProgressListeners();
         this.setupDragAndDrop(); this.setupDragAndDrop(); this.initializePackageSearch();
+        this.setupPackageTabs();
     } initializePackageSearch() {
         // Function to initialize the package search UI
         const initSearchUI = () => {
@@ -41,6 +42,189 @@ class AppController {
                 setTimeout(initSearchUI, 100);
             });
         }
+    }
+
+    setupPackageTabs() {
+        // Set up tab switching functionality
+        const tabs = document.querySelectorAll('.package-tab');
+        const views = document.querySelectorAll('.package-view');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetView = tab.dataset.target;
+
+                // Remove active class from all tabs
+                tabs.forEach(t => t.classList.remove('active'));
+                // Add active class to clicked tab
+                tab.classList.add('active');
+
+                // Hide all views
+                views.forEach(view => view.classList.add('hidden'));
+                // Show target view
+                const targetElement = document.getElementById(targetView);
+                if (targetElement) {
+                    targetElement.classList.remove('hidden');
+                }
+
+                // If switching to installed packages, load them
+                if (targetView === 'installed-packages-view') {
+                    this.loadInstalledPackages();
+                }
+            });
+        });
+
+        // Set up refresh button for installed packages
+        const refreshBtn = document.getElementById('refresh-installed-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => this.loadInstalledPackages());
+        }
+    }
+
+    async loadInstalledPackages() {
+        if (!window.electronAPI) {
+            this.updateUninstallStatus('❌ Application error: electronAPI not available', true);
+            return;
+        }
+
+        try {
+            this.updateUninstallStatus('🔄 Loading installed packages...', false);
+
+            const refreshBtn = document.getElementById('refresh-installed-btn');
+            if (refreshBtn) refreshBtn.disabled = true;
+
+            const result = await window.electronAPI.listInstalledPackages();
+
+            if (result.success && result.packages) {
+                this.displayInstalledPackages(result.packages);
+                this.updateUninstallStatus(`Found ${result.packages.length} installed packages`, false);
+            } else {
+                this.updateUninstallStatus(`❌ Failed to load packages: ${result.error || 'Unknown error'}`, true);
+                this.clearInstalledPackages();
+            }
+        } catch (error) {
+            console.error('Load packages error:', error);
+            this.updateUninstallStatus(`❌ Failed to load packages: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
+            this.clearInstalledPackages();
+        } finally {
+            const refreshBtn = document.getElementById('refresh-installed-btn');
+            if (refreshBtn) refreshBtn.disabled = false;
+        }
+    } displayInstalledPackages(packages) {
+        const packagesList = document.getElementById('installed-packages-list');
+        if (!packagesList) return;
+
+        if (packages.length === 0) {
+            packagesList.innerHTML = '<p class="text-gray-500 text-center py-4">No packages found</p>';
+            packagesList.classList.remove('has-items');
+            return;
+        }
+
+        // Add class to enable scrollbar when there are items
+        packagesList.classList.add('has-items');
+
+        const packagesHtml = packages.map(pkg => `
+            <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-red-300 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <h4 class="font-medium text-gray-900">${this.escapeHtml(pkg.name)}</h4>
+                        <p class="text-sm text-gray-600">ID: ${this.escapeHtml(pkg.id)}</p>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <span class="text-xs px-2 py-1 rounded ${pkg.source === 'winget' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}">${pkg.source}</span>
+                            <span class="text-xs text-gray-500">v${this.escapeHtml(pkg.version)}</span>
+                        </div>
+                    </div>
+                    <button 
+                        class="uninstall-package-btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                        data-package-id="${this.escapeHtml(pkg.id)}"
+                        data-package-source="${this.escapeHtml(pkg.source)}"
+                        data-package-name="${this.escapeHtml(pkg.name)}"
+                    >
+                        Uninstall
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        packagesList.innerHTML = packagesHtml;
+
+        // Add event listeners to uninstall buttons
+        packagesList.querySelectorAll('.uninstall-package-btn').forEach(button => {
+            button.addEventListener('click', (event) => {
+                this.handleUninstall(event.target);
+            });
+        });
+
+        // Check scrollability of the package list
+        this.checkScrollable(packagesList);
+    }
+
+    async handleUninstall(button) {
+        if (!window.electronAPI) {
+            this.updateUninstallStatus('❌ Application error: electronAPI not available', true);
+            return;
+        }
+
+        const packageId = button.dataset.packageId;
+        const source = button.dataset.packageSource;
+        const packageName = button.dataset.packageName;
+
+        try {
+            // Disable button and show loading state
+            button.disabled = true;
+            button.textContent = 'Uninstalling...';
+
+            this.updateUninstallStatus(`🔄 Uninstalling ${packageName}...`, false);
+
+            const result = await window.electronAPI.uninstallPackage(packageId, source);
+
+            if (result.success) {
+                this.updateUninstallStatus(`✅ ${packageName} uninstalled successfully!`, false);
+                // Remove the package from the list
+                button.closest('.bg-white').remove();
+            } else {
+                this.updateUninstallStatus(`❌ Failed to uninstall ${packageName}: ${result.error}`, true);
+                button.disabled = false;
+                button.textContent = 'Uninstall';
+            }
+        } catch (error) {
+            console.error('Uninstall error:', error);
+            this.updateUninstallStatus(`❌ Uninstall failed: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
+            button.disabled = false;
+            button.textContent = 'Uninstall';
+        }
+    } clearInstalledPackages() {
+        const packagesList = document.getElementById('installed-packages-list');
+        if (packagesList) {
+            packagesList.innerHTML = '<p class="text-gray-500 text-center py-4">No packages found</p>';
+            packagesList.classList.remove('has-items');
+        }
+    }
+
+    updateUninstallStatus(message, isError) {
+        const element = document.getElementById('uninstall-status');
+        if (element) {
+            element.textContent = message;
+            element.classList.remove('hidden');
+
+            // Clear existing classes
+            element.classList.remove('bg-green-50', 'border-green-200', 'text-green-800',
+                'bg-red-50', 'border-red-200', 'text-red-800',
+                'bg-blue-50', 'border-blue-200', 'text-blue-800');
+
+            if (isError) {
+                element.classList.add('bg-red-50', 'border-red-200', 'text-red-800');
+            } else if (message.includes('✅')) {
+                element.classList.add('bg-green-50', 'border-green-200', 'text-green-800');
+            } else {
+                element.classList.add('bg-blue-50', 'border-blue-200', 'text-blue-800');
+            }
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     setupEventListeners() {
@@ -402,6 +586,35 @@ class AppController {
         setTimeout(() => {
             this.setupDragAndDrop();
         }, 100);
+    }
+
+    // Add scroll detection utility
+    checkScrollable(element) {
+        if (!element) return;
+
+        const isScrollable = element.scrollHeight > element.clientHeight;
+        if (isScrollable) {
+            element.classList.add('is-scrollable');
+        } else {
+            element.classList.remove('is-scrollable');
+        }
+
+        // Update scroll indicator based on scroll position
+        const updateScrollIndicator = () => {
+            const isAtBottom = element.scrollHeight - element.clientHeight <= element.scrollTop + 1;
+            if (isAtBottom) {
+                element.classList.remove('is-scrollable');
+            } else if (isScrollable) {
+                element.classList.add('is-scrollable');
+            }
+        };
+
+        // Add scroll listener to update indicator
+        element.removeEventListener('scroll', updateScrollIndicator);
+        element.addEventListener('scroll', updateScrollIndicator);
+
+        // Initial check
+        updateScrollIndicator();
     }
 }
 

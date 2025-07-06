@@ -50,14 +50,18 @@ class PackageSearchUI {
             this.updateStatus(`❌ Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
             this.clearResults();
         }
-    }
-
-    displayResults(packages) {
+    } displayResults(packages) {
         if (!this.searchResults) return;
+
         if (packages.length === 0) {
             this.searchResults.innerHTML = '<p class="text-gray-500 text-center py-4">No packages found</p>';
+            this.searchResults.classList.remove('has-items');
             return;
         }
+
+        // Add class to enable scrollbar when there are items
+        this.searchResults.classList.add('has-items');
+
         const resultsHtml = packages.map(pkg => `
             <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
                 <div class="flex items-center justify-between">
@@ -81,13 +85,18 @@ class PackageSearchUI {
                 </div>
             </div>
         `).join('');
+
         this.searchResults.innerHTML = resultsHtml;
+
         // Add event listeners to install buttons
         this.searchResults.querySelectorAll('.install-package-btn').forEach(button => {
             button.addEventListener('click', (event) => {
                 this.handleInstall(event.target);
             });
         });
+
+        // Check if results container is scrollable
+        this.checkScrollable(this.searchResults);
     }
 
     async handleInstall(button) {
@@ -121,11 +130,10 @@ class PackageSearchUI {
             button.disabled = false;
             button.textContent = 'Install';
         }
-    }
-
-    clearResults() {
+    } clearResults() {
         if (this.searchResults) {
-            this.searchResults.innerHTML = '';
+            this.searchResults.innerHTML = '<p class="text-gray-500 text-center py-8">Start typing to search for packages...</p>';
+            this.searchResults.classList.remove('has-items');
         }
     }
 
@@ -148,6 +156,35 @@ class PackageSearchUI {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // Add scroll detection utility
+    checkScrollable(element) {
+        if (!element) return;
+
+        const isScrollable = element.scrollHeight > element.clientHeight;
+        if (isScrollable) {
+            element.classList.add('is-scrollable');
+        } else {
+            element.classList.remove('is-scrollable');
+        }
+
+        // Update scroll indicator based on scroll position
+        const updateScrollIndicator = () => {
+            const isAtBottom = element.scrollHeight - element.clientHeight <= element.scrollTop + 1;
+            if (isAtBottom) {
+                element.classList.remove('is-scrollable');
+            } else if (isScrollable) {
+                element.classList.add('is-scrollable');
+            }
+        };
+
+        // Add scroll listener to update indicator
+        element.removeEventListener('scroll', updateScrollIndicator);
+        element.addEventListener('scroll', updateScrollIndicator);
+
+        // Initial check
+        updateScrollIndicator();
     }
 }
 

@@ -23,14 +23,13 @@ export function shouldBehaveLikePackageAdapter(factory: () => PackageAdapter) {
 
             // This test will fail until we implement the adapter properly
             await expect(adapter.exportList(filename)).resolves.not.toThrow();
-        });
-
-        it('should have required methods defined', () => {
+        }); it('should have required methods defined', () => {
             const adapter = factory();
 
             expect(typeof adapter.exportList).toBe('function');
             expect(typeof adapter.search).toBe('function');
             expect(typeof adapter.install).toBe('function');
+            expect(typeof adapter.uninstall).toBe('function');
             expect(typeof adapter.ensurePresent).toBe('function');
         });
 
@@ -71,6 +70,14 @@ export function shouldBehaveLikePackageAdapter(factory: () => PackageAdapter) {
 
             // Test with mock package ID
             const result = await adapter.install('mock.package');
+            expect(typeof result).toBe('boolean');
+        });
+
+        it('uninstall should return boolean indicating success', async () => {
+            const adapter = factory();
+
+            // Test with mock package ID
+            const result = await adapter.uninstall('mock.package');
             expect(typeof result).toBe('boolean');
         });
 

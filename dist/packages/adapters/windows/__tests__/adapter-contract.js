@@ -27,6 +27,7 @@ function shouldBehaveLikePackageAdapter(factory) {
             expect(typeof adapter.exportList).toBe('function');
             expect(typeof adapter.search).toBe('function');
             expect(typeof adapter.install).toBe('function');
+            expect(typeof adapter.uninstall).toBe('function');
             expect(typeof adapter.ensurePresent).toBe('function');
         });
         it('exportList should handle different filename formats', async () => {
@@ -61,6 +62,12 @@ function shouldBehaveLikePackageAdapter(factory) {
             const adapter = factory();
             // Test with mock package ID
             const result = await adapter.install('mock.package');
+            expect(typeof result).toBe('boolean');
+        });
+        it('uninstall should return boolean indicating success', async () => {
+            const adapter = factory();
+            // Test with mock package ID
+            const result = await adapter.uninstall('mock.package');
             expect(typeof result).toBe('boolean');
         });
         it('ensurePresent should return boolean indicating if package is installed', async () => {

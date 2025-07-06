@@ -10,10 +10,11 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     saveSettings: (settings) => electron_1.ipcRenderer.invoke('save-settings', settings),
     // File system operations
     selectFile: (options) => electron_1.ipcRenderer.invoke('select-file', options),
-    selectDirectory: () => electron_1.ipcRenderer.invoke('select-directory'),
-    // Package management
+    selectDirectory: () => electron_1.ipcRenderer.invoke('select-directory'), // Package management
     searchPackages: (query) => electron_1.ipcRenderer.invoke('search-packages', query),
     installPackage: (packageId, source, version) => electron_1.ipcRenderer.invoke('install-package', packageId, source, version),
+    uninstallPackage: (packageId, source) => electron_1.ipcRenderer.invoke('uninstall-package', packageId, source),
+    listInstalledPackages: () => electron_1.ipcRenderer.invoke('list-installed-packages'),
     // Window controls
     minimizeWindow: () => electron_1.ipcRenderer.invoke('minimize-window'),
     maximizeWindow: () => electron_1.ipcRenderer.invoke('maximize-window'),

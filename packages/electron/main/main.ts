@@ -279,6 +279,85 @@ function setupIpcHandlers(): void {    // Backup packages
             console.error('Package installation failed:', error);
             return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
+    });    // Package uninstallation
+    ipcMain.handle('uninstall-package', async (event, packageId: string, source: string) => {
+        try {
+            console.log(`IPC: Received uninstall-package request for ${packageId} from ${source}`);
+            const execFunction = async (command: string, args: string[]) => {
+                const result = await execAsync(`${command} ${args.join(' ')}`);
+                return {
+                    stdout: result.stdout,
+                    stderr: result.stderr,
+                    exitCode: 0
+                };
+            };
+
+            let adapter;
+            if (source === 'winget') {
+                adapter = new WingetAdapter(execFunction);
+            } else if (source === 'chocolatey') {
+                adapter = new ChocoAdapter(execFunction);
+            } else {
+                throw new Error(`Unknown package source: ${source}`);
+            }
+
+            const result = await adapter.uninstall(packageId);
+
+            if (result) {
+                console.log(`IPC: Successfully uninstalled ${packageId}`);
+                return { success: true, message: `${packageId} uninstalled successfully` };
+            } else {
+                console.log(`IPC: Failed to uninstall ${packageId}`);
+                return { success: false, error: `Failed to uninstall ${packageId}` };
+            }
+        } catch (error) {
+            console.error('Package uninstallation failed:', error);
+            return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+    });    // List installed packages
+    ipcMain.handle('list-installed-packages', async () => {
+        try {
+            console.log('IPC: Received list-installed-packages request');
+            const execFunction = async (command: string, args: string[]) => {
+                const result = await execAsync(`${command} ${args.join(' ')}`);
+                return {
+                    stdout: result.stdout,
+                    stderr: result.stderr,
+                    exitCode: 0
+                };
+            };
+
+            const settings = await loadSettings();
+            const allResults: any[] = [];
+
+            // List packages from Winget if enabled
+            if (settings.enableWinget !== false) {
+                try {
+                    const wingetAdapter = new WingetAdapter(execFunction);
+                    const wingetResults = await wingetAdapter.listInstalled();
+                    allResults.push(...wingetResults.map(pkg => ({ ...pkg, source: 'winget' })));
+                } catch (error) {
+                    console.warn('Winget list failed:', error);
+                }
+            }
+
+            // List packages from Chocolatey if enabled
+            if (settings.enableChoco !== false) {
+                try {
+                    const chocoAdapter = new ChocoAdapter(execFunction);
+                    const chocoResults = await chocoAdapter.listInstalled();
+                    allResults.push(...chocoResults.map(pkg => ({ ...pkg, source: 'chocolatey' })));
+                } catch (error) {
+                    console.warn('Chocolatey list failed:', error);
+                }
+            }
+
+            console.log(`IPC: Returning ${allResults.length} installed packages`);
+            return { success: true, packages: allResults };
+        } catch (error) {
+            console.error('List installed packages failed:', error);
+            return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
     });
 
     // Window controls

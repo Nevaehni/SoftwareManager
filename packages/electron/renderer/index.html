@@ -73,6 +73,40 @@
             background: #94a3b8;
         }
 
+        /* Package list containers with adaptive height */
+        .package-list-container {
+            max-height: min(24rem, calc(100vh - 400px));
+            position: relative;
+        }
+
+        /* Smooth scrolling behavior */
+        .custom-scrollbar {
+            scroll-behavior: smooth;
+        }
+
+        /* Hide scrollbar for package containers when empty */
+        .package-list-container:not(.has-items) {
+            overflow: hidden;
+        }
+
+        /* Scroll indicator - shows gradient when content is scrollable */
+        .package-list-container.has-items::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: linear-gradient(transparent, rgba(249, 250, 251, 0.8));
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .package-list-container.has-items.is-scrollable::after {
+            opacity: 1;
+        }
+
         .professional-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -301,9 +335,7 @@
                             <div id="restore-status" class="hidden p-3 rounded-lg border"></div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Packages Section -->
+                </div> <!-- Packages Section -->
                 <div id="packages-section" class="content-section hidden">
                     <div class="professional-card rounded-lg p-6 mb-6">
                         <div class="flex items-center space-x-4 mb-6">
@@ -314,33 +346,94 @@
                                 </svg>
                             </div>
                             <div>
-                                <h2 class="text-xl font-semibold text-gray-900">Search & Install Packages</h2>
-                                <p class="text-gray-600">Find and install software packages from Winget and Chocolatey
+                                <h2 class="text-xl font-semibold text-gray-900">Package Management</h2>
+                                <p class="text-gray-600">Search, install, and manage software packages from Winget and
+                                    Chocolatey
                                 </p>
                             </div>
                         </div>
 
-                        <div class="space-y-6">
-                            <!-- Search Input -->
-                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                <label for="package-search-input" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Search Packages
-                                </label>
-                                <input type="text" id="package-search-input"
-                                    placeholder="Type package name (e.g., git, node, vscode)..."
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                                <p class="text-xs text-gray-500 mt-2">Search across both Winget and Chocolatey package
-                                    repositories</p>
+                        <!-- Tab Navigation -->
+                        <div class="border-b border-gray-200 mb-6">
+                            <nav class="-mb-px flex space-x-8">
+                                <button id="search-packages-tab" class="package-tab active"
+                                    data-target="search-packages-view">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                    Search & Install
+                                </button>
+                                <button id="installed-packages-tab" class="package-tab"
+                                    data-target="installed-packages-view">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                                    </svg>
+                                    Installed Packages
+                                </button>
+                            </nav>
+                        </div>
+
+                        <!-- Search & Install View -->
+                        <div id="search-packages-view" class="package-view">
+                            <div class="space-y-6">
+                                <!-- Search Input -->
+                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                    <label for="package-search-input"
+                                        class="block text-sm font-medium text-gray-700 mb-2">
+                                        Search Packages
+                                    </label>
+                                    <input type="text" id="package-search-input"
+                                        placeholder="Type package name (e.g., git, node, vscode)..."
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                    <p class="text-xs text-gray-500 mt-2">Search across both Winget and Chocolatey
+                                        package
+                                        repositories</p>
+                                </div>
+
+                                <!-- Search Status -->
+                                <div id="search-status" class="hidden p-3 rounded-lg border"></div>
+                                <!-- Search Results -->
+                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                    <h3 class="font-medium text-gray-900 mb-4">Search Results</h3>
+                                    <div id="search-results"
+                                        class="space-y-3 package-list-container overflow-y-auto custom-scrollbar pr-2">
+                                        <p class="text-gray-500 text-center py-8">Start typing to search for packages...
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
 
-                            <!-- Search Status -->
-                            <div id="search-status" class="hidden p-3 rounded-lg border"></div>
+                        <!-- Installed Packages View -->
+                        <div id="installed-packages-view" class="package-view hidden">
+                            <div class="space-y-6">
+                                <!-- Refresh Button -->
+                                <div class="flex justify-between items-center">
+                                    <h3 class="font-medium text-gray-900">Installed Packages</h3>
+                                    <button id="refresh-installed-btn"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium">
+                                        <div class="flex items-center space-x-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                                </path>
+                                            </svg>
+                                            <span>Refresh</span>
+                                        </div>
+                                    </button>
+                                </div>
 
-                            <!-- Search Results -->
-                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                <h3 class="font-medium text-gray-900 mb-4">Search Results</h3>
-                                <div id="search-results" class="space-y-3">
-                                    <p class="text-gray-500 text-center py-8">Start typing to search for packages...</p>
+                                <!-- Uninstall Status -->
+                                <div id="uninstall-status" class="hidden p-3 rounded-lg border"></div>
+                                <!-- Installed Packages List -->
+                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                    <div id="installed-packages-list"
+                                        class="space-y-3 package-list-container overflow-y-auto custom-scrollbar pr-2">
+                                        <p class="text-gray-500 text-center py-8">Click refresh to load installed
+                                            packages...</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

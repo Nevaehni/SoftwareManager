@@ -53,6 +53,7 @@ vscode|1.85.0`;
                 id: 'nodejs',
                 name: 'nodejs',
                 version: '20.10.0',
+                source: 'chocolatey'
             });
         });
         test('Choco_search_throws_on_error', async () => {
@@ -96,6 +97,27 @@ vscode|1.85.0`;
                 exitCode: 1,
             });
             const result = await adapter.install('nonexistent');
+            expect(result).toBe(false);
+        });
+        test('Choco_uninstall_package', async () => {
+            // Red phase: Test that uninstall calls choco uninstall command
+            mockExec.mockResolvedValue({
+                stdout: 'Package uninstalled successfully',
+                stderr: '',
+                exitCode: 0,
+            });
+            const result = await adapter.uninstall('nodejs');
+            expect(mockExec).toHaveBeenCalledWith('choco', ['uninstall', 'nodejs', '-y']);
+            expect(result).toBe(true);
+        });
+        test('Choco_uninstall_returns_false_on_failure', async () => {
+            // Test that uninstall returns false when command fails
+            mockExec.mockResolvedValue({
+                stdout: '',
+                stderr: 'Uninstall failed',
+                exitCode: 1,
+            });
+            const result = await adapter.uninstall('nonexistent');
             expect(result).toBe(false);
         });
     });

@@ -102,6 +102,11 @@ class ChocoAdapter {
         const result = await this.execFunction('choco', args);
         return result.exitCode === 0;
     }
+    async uninstall(packageId) {
+        this.validateExecFunction();
+        const result = await this.execFunction('choco', ['uninstall', packageId, '-y']);
+        return result.exitCode === 0;
+    }
     async ensurePresent(packageId) {
         this.validateExecFunction();
         try {

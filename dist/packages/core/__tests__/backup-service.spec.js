@@ -48,6 +48,7 @@ describe('BackupService', () => {
             exportList: sinon.spy(),
             search: sinon.stub().resolves([]),
             install: sinon.stub().resolves(true),
+            uninstall: sinon.stub().resolves(true),
             ensurePresent: sinon.stub().resolves(true)
         };
         const backupService = new backup_service_1.BackupService(mockAdapter);
@@ -61,6 +62,7 @@ describe('BackupService', () => {
             exportList: sinon.spy(),
             search: sinon.stub().resolves([]),
             install: sinon.stub().resolves(true),
+            uninstall: sinon.stub().resolves(true),
             ensurePresent: sinon.stub().resolves(true)
         };
         const settings = { enableChoco: false };
@@ -74,12 +76,14 @@ describe('BackupService', () => {
             exportList: sinon.stub().resolves(),
             search: sinon.stub().resolves([]),
             install: sinon.stub().resolves(true),
+            uninstall: sinon.stub().resolves(true),
             ensurePresent: sinon.stub().resolves(true)
         };
         const mockChocoAdapter = {
             exportList: sinon.stub().resolves(),
             search: sinon.stub().resolves([]),
             install: sinon.stub().resolves(true),
+            uninstall: sinon.stub().resolves(true),
             ensurePresent: sinon.stub().resolves(true)
         };
         const backupService = new backup_service_1.BackupService();
@@ -95,12 +99,14 @@ describe('BackupService', () => {
             exportList: sinon.stub().resolves(),
             search: sinon.stub().resolves([]),
             install: sinon.stub().resolves(true),
+            uninstall: sinon.stub().resolves(true),
             ensurePresent: sinon.stub().resolves(true)
         };
         const mockChocoAdapter = {
             exportList: sinon.stub().resolves(),
             search: sinon.stub().resolves([]),
             install: sinon.stub().resolves(true),
+            uninstall: sinon.stub().resolves(true),
             ensurePresent: sinon.stub().resolves(true)
         };
         const settings = { enableChoco: false };

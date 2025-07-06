@@ -12,6 +12,7 @@ export declare class ChocoAdapter implements PackageAdapter {
     listInstalled(): Promise<PackageInfo[]>;
     search(query: string): Promise<PackageInfo[]>;
     install(packageId: string, version?: string): Promise<boolean>;
+    uninstall(packageId: string): Promise<boolean>;
     ensurePresent(packageId: string): Promise<boolean>;
     private parseChocoList;
     private validateExecFunction;

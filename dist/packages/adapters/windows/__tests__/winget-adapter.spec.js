@@ -69,6 +69,30 @@ Visual Studio Code         Microsoft.VisualStudioCode          1.85.0           
         expect(execStub.calledOnce).toBe(true);
         expect(execStub.calledWith('winget', ['install', 'Git.Git', '--version', '2.35.0', '--accept-source-agreements'])).toBe(true);
     });
+    it('Winget_uninstall_package', async () => {
+        // Red phase: Test that uninstall calls winget uninstall command
+        const execStub = sinon.stub().resolves({
+            stdout: '',
+            stderr: '',
+            exitCode: 0
+        });
+        const adapter = new winget_adapter_1.WingetAdapter(execStub);
+        const result = await adapter.uninstall('Git.Git');
+        expect(execStub.calledOnce).toBe(true);
+        expect(execStub.calledWith('winget', ['uninstall', 'Git.Git', '--accept-source-agreements'])).toBe(true);
+        expect(result).toBe(true);
+    });
+    it('Winget_uninstall_returns_false_on_failure', async () => {
+        // Test that uninstall returns false when command fails
+        const execStub = sinon.stub().resolves({
+            stdout: '',
+            stderr: 'Package not found',
+            exitCode: 1
+        });
+        const adapter = new winget_adapter_1.WingetAdapter(execStub);
+        const result = await adapter.uninstall('NonExistent.Package');
+        expect(result).toBe(false);
+    });
     it('Winget_ensure_absent', async () => {
         // Red phase: Test that ensurePresent() returns false when exit code ≠ 0
         const execStub = sinon.stub().resolves({
