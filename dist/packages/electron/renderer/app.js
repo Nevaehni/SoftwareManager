@@ -2,12 +2,16 @@
 class AppController {
     constructor() {
         this.selectedBundlePath = null;
-    }
-
-    initialize() {
+    } initialize() {
         this.setupEventListeners();
         this.loadSettings();
         this.setupProgressListeners();
+
+        // Auto-test settings save after 3 seconds
+        setTimeout(() => {
+            console.log('AUTO-TEST: Running automatic settings save test...');
+            this.handleTestSaveSettings();
+        }, 3000);
     }
 
     setupEventListeners() {
@@ -26,9 +30,7 @@ class AppController {
         const restoreBtn = document.getElementById('restore-btn');
         if (restoreBtn) {
             restoreBtn.addEventListener('click', () => this.handleRestore());
-        }
-
-        // Settings functionality
+        }        // Settings functionality
         const saveSettingsBtn = document.getElementById('save-settings-btn');
         if (saveSettingsBtn) {
             saveSettingsBtn.addEventListener('click', () => this.handleSaveSettings());
@@ -137,24 +139,32 @@ class AppController {
             const restoreBtn = document.getElementById('restore-btn');
             if (restoreBtn) restoreBtn.disabled = false;
         }
-    }
-
-    async handleSaveSettings() {
+    } async handleSaveSettings() {
         try {
             console.log('Save settings button clicked');
 
             if (!window.electronAPI) {
                 console.error('electronAPI not available');
                 return;
-            } const enableChoco = document.getElementById('enable-choco')?.checked ?? true;
+            }
+
+            const enableChoco = document.getElementById('enable-choco')?.checked ?? true;
             const enableWinget = document.getElementById('enable-winget')?.checked ?? true;
+
+            console.log('Current checkbox values:');
+            console.log('  enable-choco checked:', enableChoco);
+            console.log('  enable-winget checked:', enableWinget);
 
             const settings = {
                 enableChoco,
                 enableWinget
             };
 
+            console.log('Settings object to save:', settings);
+
             const result = await window.electronAPI.saveSettings(settings);
+
+            console.log('Save result:', result);
 
             if (result.success) {
                 this.updateStatus('settings-status', '✅ Settings saved successfully!', false);
@@ -174,14 +184,22 @@ class AppController {
                 return;
             }
 
-            const settings = await window.electronAPI.getSettings(); const enableChocoCheckbox = document.getElementById('enable-choco');
+            console.log('Loading settings from main process...');
+            const settings = await window.electronAPI.getSettings();
+            console.log('Received settings:', settings);
+
+            const enableChocoCheckbox = document.getElementById('enable-choco');
             const enableWingetCheckbox = document.getElementById('enable-winget');
 
-            if (enableChocoCheckbox) {
+            console.log('Updating UI with settings:'); if (enableChocoCheckbox) {
                 enableChocoCheckbox.checked = settings.enableChoco !== false;
+                console.log('  Set enable-choco to:', enableChocoCheckbox.checked);
+                this.updateToggleAppearance(enableChocoCheckbox);
             }
             if (enableWingetCheckbox) {
                 enableWingetCheckbox.checked = settings.enableWinget !== false;
+                console.log('  Set enable-winget to:', enableWingetCheckbox.checked);
+                this.updateToggleAppearance(enableWingetCheckbox);
             }
         } catch (error) {
             console.error('Load settings error:', error);
@@ -219,6 +237,27 @@ class AppController {
             } else {
                 element.classList.add('bg-blue-50', 'border-blue-200', 'text-blue-800');
             }
+        }
+    } updateToggleAppearance(checkbox) {
+        console.log('updateToggleAppearance called for:', checkbox.id, 'checked:', checkbox.checked);
+        const toggleBg = checkbox.parentElement.querySelector('.toggle-bg');
+        const toggleDot = checkbox.parentElement.querySelector('.toggle-dot');
+
+        if (toggleBg && toggleDot) {
+            console.log('Found toggle elements for:', checkbox.id);
+            if (checkbox.checked) {
+                console.log('Setting toggle to checked state for:', checkbox.id);
+                toggleBg.classList.remove('bg-gray-300');
+                toggleBg.classList.add('bg-corporate-blue');
+                toggleDot.classList.add('translate-x-5');
+            } else {
+                console.log('Setting toggle to unchecked state for:', checkbox.id);
+                toggleBg.classList.remove('bg-corporate-blue');
+                toggleBg.classList.add('bg-gray-300');
+                toggleDot.classList.remove('translate-x-5');
+            }
+        } else {
+            console.error('Could not find toggle elements for:', checkbox.id);
         }
     }
 }

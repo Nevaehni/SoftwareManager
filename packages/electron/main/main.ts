@@ -137,25 +137,26 @@ function setupIpcHandlers(): void {    // Backup packages
             console.error('Restore failed:', error);
             return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
-    });
-
-    // Get settings
+    });    // Get settings
     ipcMain.handle('get-settings', async () => {
         try {
-            return await loadSettings();
+            console.log('IPC: Received get-settings request');
+            const settings = await loadSettings();
+            console.log('IPC: Returning settings:', settings);
+            return settings;
         } catch (error) {
-            console.error('Failed to load settings:', error);
+            console.error('IPC: Failed to load settings:', error);
             return { enableChoco: true, enableWinget: true }; // Default settings
         }
-    });
-
-    // Save settings
+    });// Save settings
     ipcMain.handle('save-settings', async (event, settings: Settings) => {
         try {
+            console.log('IPC: Received save-settings request with:', settings);
             await saveSettings(settings);
+            console.log('IPC: Settings saved successfully');
             return { success: true };
         } catch (error) {
-            console.error('Failed to save settings:', error);
+            console.error('IPC: Failed to save settings:', error);
             return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
     });
@@ -224,21 +225,44 @@ function setupIpcHandlers(): void {    // Backup packages
 // Settings management
 async function loadSettings(): Promise<Settings> {
     const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+    console.log('Loading settings from:', settingsPath);
     try {
         if (fs.existsSync(settingsPath)) {
             const data = fs.readFileSync(settingsPath, 'utf8');
-            return JSON.parse(data);
+            const settings = JSON.parse(data);
+            console.log('Loaded settings:', settings);
+            return settings;
+        } else {
+            console.log('Settings file does not exist, using defaults');
         }
     } catch (error) {
         console.error('Failed to load settings:', error);
     }
-    return { enableChoco: true, enableWinget: true }; // Default settings
+    const defaults = { enableChoco: true, enableWinget: true };
+    console.log('Using default settings:', defaults);
+    return defaults; // Default settings
 }
 
 async function saveSettings(settings: Settings): Promise<void> {
     const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+    console.log('Saving settings to:', settingsPath);
+    console.log('Settings to save:', settings);
     try {
+        // Ensure the directory exists
+        const userDataPath = app.getPath('userData');
+        if (!fs.existsSync(userDataPath)) {
+            console.log('Creating user data directory:', userDataPath);
+            fs.mkdirSync(userDataPath, { recursive: true });
+        }
+
         fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+        console.log('Settings saved successfully');
+
+        // Verify the file was written correctly
+        if (fs.existsSync(settingsPath)) {
+            const savedData = fs.readFileSync(settingsPath, 'utf8');
+            console.log('Verified saved settings:', JSON.parse(savedData));
+        }
     } catch (error) {
         console.error('Failed to save settings:', error);
         throw error;
