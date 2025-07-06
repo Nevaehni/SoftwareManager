@@ -38,6 +38,7 @@ exports.SoftwareManagerCLI = void 0;
 const backup_service_1 = require("../core/src/backup-service");
 const restore_service_1 = require("../core/src/restore-service");
 const package_manager_installer_1 = require("../core/src/package-manager-installer");
+const custom_installer_service_1 = require("../core/src/custom-installer-service");
 const winget_adapter_1 = require("../adapters/windows/winget-adapter");
 const choco_adapter_1 = require("../adapters/windows/choco-adapter");
 const child_process_1 = require("child_process");
@@ -47,11 +48,43 @@ const path = __importStar(require("path"));
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
 class SoftwareManagerCLI {
     constructor(options = {}) {
+        this.installersConfigPath = 'tmp/cli-custom-installers.json';
         this.settings = {
             enableChoco: options.enableChoco ?? true,
             enableWinget: options.enableWinget ?? true,
             ...options
         };
+        this.customInstallerService = new custom_installer_service_1.CustomInstallerService();
+        // Ensure tmp directory exists for storing CLI config
+        if (!fs.existsSync('tmp')) {
+            fs.mkdirSync('tmp', { recursive: true });
+        }
+    }
+    /**
+     * Load custom installers list from persistent storage
+     */
+    loadCustomInstallers() {
+        try {
+            if (fs.existsSync(this.installersConfigPath)) {
+                const content = fs.readFileSync(this.installersConfigPath, 'utf8');
+                return JSON.parse(content) || [];
+            }
+        }
+        catch (error) {
+            console.warn('Failed to load custom installers config:', error);
+        }
+        return [];
+    }
+    /**
+     * Save custom installers list to persistent storage
+     */
+    saveCustomInstallers(installers) {
+        try {
+            fs.writeFileSync(this.installersConfigPath, JSON.stringify(installers, null, 2));
+        }
+        catch (error) {
+            console.warn('Failed to save custom installers config:', error);
+        }
     }
     async createExecFunction() {
         return async (command, args) => {
@@ -81,6 +114,14 @@ class SoftwareManagerCLI {
             console.log('🍫 Adding Chocolatey adapter...');
             const chocoAdapter = new choco_adapter_1.ChocoAdapter(execFunction);
             backupService.addAdapter('choco', chocoAdapter);
+        }
+        // Add custom installers from CLI
+        const customInstallers = this.loadCustomInstallers();
+        if (customInstallers.length > 0) {
+            console.log(`📱 Adding ${customInstallers.length} custom installer(s)...`);
+            customInstallers.forEach(installerPath => {
+                backupService.addCustomInstaller(installerPath);
+            });
         }
         await backupService.run();
         // Move the generated file to the desired output path
@@ -175,6 +216,9 @@ Commands:
   bootstrap            Install missing package managers (Winget/Chocolatey)
   version              Show version information
   help                 Show this help message
+  add-installer <path> <name>   Add a custom installer
+  list-installers      List all custom installers
+  remove-installer <name>   Remove a custom installer
 
 Options:
   --no-choco          Disable Chocolatey package manager
@@ -187,6 +231,9 @@ Examples:
   software-manager list
   software-manager bootstrap
   software-manager --no-choco backup
+  software-manager add-installer ./my-installer.exe "My Installer"
+  software-manager list-installers
+  software-manager remove-installer "My Installer"
         `);
     }
     async bootstrap() {
@@ -228,6 +275,91 @@ Examples:
             throw error;
         }
     }
+    async addCustomInstaller(installerPath, installerName) {
+        console.log(`➕ Adding custom installer: ${installerPath}`);
+        try {
+            // Determine if it's a URL or file path
+            const isUrl = installerPath.startsWith('http://') || installerPath.startsWith('https://');
+            let result;
+            if (isUrl) {
+                // Download from URL
+                result = await this.customInstallerService.downloadInstaller(installerPath, 'tmp/custom-installers');
+            }
+            else {
+                // Add local file
+                if (!fs.existsSync(installerPath)) {
+                    throw new Error(`Installer file not found: ${installerPath}`);
+                }
+                result = await this.customInstallerService.addInstallerToBundle(installerPath, 'tmp/custom-installers');
+            }
+            if (result.success) {
+                // Update CLI installer list
+                const installers = this.loadCustomInstallers();
+                if (!installers.includes(installerPath)) {
+                    installers.push(installerPath);
+                    this.saveCustomInstallers(installers);
+                }
+                console.log(`✅ Custom installer added successfully`);
+            }
+            else {
+                throw new Error(result.error || 'Unknown error');
+            }
+        }
+        catch (error) {
+            console.error(`❌ Failed to add installer: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
+        }
+    }
+    async listCustomInstallers() {
+        console.log('📦 Listing custom installers...');
+        try {
+            const installers = await this.customInstallerService.listBundleInstallers('tmp/custom-installers');
+            if (installers.length === 0) {
+                console.log('   No custom installers found');
+                return;
+            }
+            console.log(`   Found ${installers.length} custom installer(s):`);
+            installers.forEach((installer, index) => {
+                const source = installer.downloadUrl ? `Downloaded from: ${installer.downloadUrl}` : `Local file: ${installer.originalPath}`;
+                console.log(`   ${index + 1}. ${installer.name} (${installer.type.toUpperCase()})`);
+                console.log(`      ${source}`);
+                console.log(`      Size: ${Math.round(installer.size / 1024 / 1024 * 100) / 100} MB`);
+                console.log('');
+            });
+        }
+        catch (error) {
+            console.error(`❌ Failed to list installers: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
+        }
+    }
+    async removeCustomInstaller(installerName) {
+        console.log(`🗑️  Removing custom installer: ${installerName}`);
+        try {
+            const installers = await this.customInstallerService.listBundleInstallers('tmp/custom-installers');
+            const installer = installers.find(i => i.name === installerName);
+            if (!installer) {
+                throw new Error(`Installer '${installerName}' not found`);
+            }
+            // Remove the installer file
+            const installerPath = path.join('tmp/custom-installers', path.basename(installer.bundledPath));
+            if (fs.existsSync(installerPath)) {
+                fs.unlinkSync(installerPath);
+            }
+            // Update manifest by filtering out the removed installer
+            const remainingInstallers = installers.filter(i => i.name !== installerName);
+            const manifestPath = path.join('tmp/custom-installers', 'custom-installers.json');
+            fs.writeFileSync(manifestPath, JSON.stringify(remainingInstallers, null, 2));
+            // Update CLI installer list
+            const cliInstallers = this.loadCustomInstallers();
+            const updatedList = cliInstallers.filter(path => !path.includes(installerName));
+            this.saveCustomInstallers(updatedList);
+            console.log(`✅ Custom installer removed successfully`);
+        }
+        catch (error) {
+            console.error(`❌ Failed to remove installer: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
+        }
+    }
 }
 exports.SoftwareManagerCLI = SoftwareManagerCLI;
 // CLI entry point
@@ -264,6 +396,24 @@ async function main() {
                 break;
             case 'bootstrap':
                 await cli.bootstrap();
+                break;
+            case 'add-installer':
+                if (!args[1]) {
+                    console.error('❌ Error: Installer path or URL is required for add-installer command');
+                    console.error('Usage: software-manager add-installer <path-or-url>');
+                    process.exit(1);
+                }
+                await cli.addCustomInstaller(args[1]);
+                break;
+            case 'list-installers':
+                await cli.listCustomInstallers();
+                break;
+            case 'remove-installer':
+                if (!args[1]) {
+                    console.error('❌ Error: Installer name is required for remove-installer command');
+                    process.exit(1);
+                }
+                await cli.removeCustomInstaller(args[1]);
                 break;
             default:
                 console.error(`❌ Unknown command: ${command}`);

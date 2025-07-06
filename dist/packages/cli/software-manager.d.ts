@@ -2,7 +2,17 @@
 import { Settings } from '../core/src/settings';
 declare class SoftwareManagerCLI {
     private settings;
+    private customInstallerService;
+    private installersConfigPath;
     constructor(options?: Partial<Settings>);
+    /**
+     * Load custom installers list from persistent storage
+     */
+    private loadCustomInstallers;
+    /**
+     * Save custom installers list to persistent storage
+     */
+    private saveCustomInstallers;
     createExecFunction(): Promise<(command: string, args: string[]) => Promise<{
         stdout: string;
         stderr: string;
@@ -14,6 +24,9 @@ declare class SoftwareManagerCLI {
     showVersion(): void;
     showHelp(): void;
     bootstrap(): Promise<void>;
+    addCustomInstaller(installerPath: string, installerName?: string): Promise<void>;
+    listCustomInstallers(): Promise<void>;
+    removeCustomInstaller(installerName: string): Promise<void>;
 }
 export { SoftwareManagerCLI };
 //# sourceMappingURL=software-manager.d.ts.map

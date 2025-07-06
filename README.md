@@ -20,7 +20,7 @@ Built 100 % with **Test-Driven Development (TDD)**, it ships a CLI *and* a moder
 | **Package Management (daily use)** | ✔ **Search & install packages** with UI<br>✔ **Uninstall packages with UI**<br>✔ **Winget & Chocolatey integration** | — |
 | **Package-Manager Bootstrap** | ✔ **One-click install** of Winget / Chocolatey when missing | ▢ Settings UI: **drag-and-drop priority list** of managers |
 | **Priority Ordering** | ✔ Settings UI: **drag-and-drop priority list** of managers | — |
-| **Custom Installer Support** | — | ▢ **Add MSI/EXE** files, include in backup & restore |
+| **Custom Installer Support** | ✔ **Add MSI/EXE** files from local paths and URLs<br>✔ **CLI integration** with full feature parity<br>✔ **Backup/restore integration** with automatic installation | — |
 | **Spec Editor** | — | ▢ Built-in **YAML/JSON editor** (Monaco) with schema validation & diff |
 | **Console / Log Viewer** | — | ▢ Toggleable pane streaming stdout/stderr; copy & filter |
 | **Restore Preview** | — | ▢ **Differential report** (new / upgrade / downgrade) before restoring |
@@ -82,6 +82,37 @@ Enhanced the package management interface with comprehensive scrolling functiona
 - **E2E Test Coverage**: Comprehensive tests verify proper CSS classes, responsive behavior, and UI structure
 
 Both search results and installed packages lists now provide smooth, professional scrolling experiences that scale gracefully with content size.
+
+**F-06: CLI Integration for Custom Installers - COMPLETED** ✅  
+The CLI now provides complete custom installer management with feature parity to the GUI. Key technical solutions:
+
+- **CLI Commands**: Added `add-installer`, `list-installers`, and `remove-installer` commands to the CLI interface
+- **URL Support**: CLI can download installers from URLs just like the GUI, with full validation and error handling
+- **Persistent Storage**: Custom installers persist between CLI sessions using `tmp/cli-custom-installers.json` configuration
+- **Backup Integration**: Enhanced backup command automatically includes any custom installers added via CLI
+- **Dual Input Support**: Commands accept both local file paths and download URLs with automatic detection
+- **Error Handling**: Comprehensive validation and user-friendly error messages for all failure scenarios
+- **Progress Feedback**: Clear status messages during add, list, and remove operations
+
+**CLI Usage Examples:**
+```bash
+# Add local installer file
+software-manager add-installer C:\tools\my-custom-app.msi
+
+# Add installer from download URL  
+software-manager add-installer https://github.com/owner/repo/releases/download/v1.0.0/installer.exe
+
+# List all custom installers
+software-manager list-installers
+
+# Create backup including custom installers
+software-manager backup my-complete-setup.yaml
+
+# Remove a custom installer
+software-manager remove-installer "My Custom App"
+```
+
+This enables complete automation scenarios where users can script their entire software setup including both package managers and custom applications. The CLI maintains the same security and validation standards as the GUI while providing scriptable, CI/CD-friendly interfaces.
 
 > **TDD rule:**  
 > _No user-facing feature in the "Missing" column may be implemented without first committing a failing test (unit, contract, integration or E2E as appropriate)._
