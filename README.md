@@ -52,6 +52,18 @@ The package search functionality has been fully implemented and tested. Key tech
 
 Users can now search for packages (e.g., "discord"), see live results with install buttons, and install directly from the UI.
 
+**📜 Package List Scrolling Enhancement - COMPLETED** ✅  
+Enhanced the package management interface with comprehensive scrolling functionality for better usability when dealing with large numbers of packages:
+
+- **Responsive Height Constraints**: Package lists use adaptive height (`min(24rem, calc(100vh - 400px))`) that automatically adjusts to viewport size
+- **Custom Scrollbar Styling**: Beautiful custom scrollbars with consistent design across the application
+- **Smart Overflow Management**: Containers only display scrollbars when content actually overflows, maintaining clean UI for shorter lists
+- **Visual Scroll Indicators**: Subtle gradient overlays appear at the bottom of containers when more content is available to scroll
+- **Dynamic State Management**: JavaScript logic automatically detects scrollable content and applies appropriate CSS classes
+- **E2E Test Coverage**: Comprehensive tests verify proper CSS classes, responsive behavior, and UI structure
+
+Both search results and installed packages lists now provide smooth, professional scrolling experiences that scale gracefully with content size.
+
 > **TDD rule:**  
 > _No user-facing feature in the "Missing" column may be implemented without first committing a failing test (unit, contract, integration or E2E as appropriate)._
 
@@ -157,6 +169,8 @@ The GUI provides:
 - **Progress tracking** with real-time feedback
 - **Professional styling** with Tailwind CSS utility-first framework
 - **Modern responsive design** optimized for desktop use
+- **Scrollable package lists** with adaptive height and custom scrollbars
+- **Smart overflow management** that only shows scrolling when needed
 
 ---
 
@@ -231,6 +245,28 @@ packages/
 - **Settings**: Persistent configuration with JSON storage
 - **CLI**: Full command-line interface with progress reporting
 - **Electron App**: Cross-platform desktop GUI
+- **ScrollableUI**: Responsive package list containers with adaptive scrolling
+
+#### Package List Scrolling Architecture
+
+The scrolling system implements a layered approach for optimal user experience:
+
+**CSS Layer:**
+- `.package-list-container` - Base scrollable container with responsive height constraints
+- `.custom-scrollbar` - Styled scrollbars with smooth behavior and hover effects
+- `.has-items` - Dynamic class applied when content is present
+- `.is-scrollable` - Visual indicator class for overflow state
+
+**JavaScript Layer:**
+- `checkScrollable()` utility function detects when containers need scrolling
+- Dynamic class management for real-time visual feedback
+- Scroll event listeners for responsive indicator updates
+- Integration with both TypeScript (main) and browser-compatible JavaScript versions
+
+**Responsive Design:**
+- Height constraints use CSS `min()` function for viewport adaptation
+- Gradient overlays provide visual cues for additional content
+- Smooth animations and transitions for professional feel
 
 ---
 
@@ -252,6 +288,12 @@ pnpm test            # unit + contract + integration
 pnpm test:e2e        # Playwright (GUI)
 pnpm test --coverage # + coverage gate
 ```
+
+**Scrolling Feature Testing:**
+- `package-scrolling-ui.spec.ts` - E2E tests for CSS classes and UI structure
+- Unit tests verify scroll detection logic in package search components
+- Integration tests ensure scrolling works across different content scenarios
+- All tests pass without breaking existing functionality
 
 ---
 
