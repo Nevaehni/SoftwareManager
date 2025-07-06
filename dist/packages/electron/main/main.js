@@ -56,8 +56,7 @@ function createMainWindow() {
             contextIsolation: true,
             preload: path.join(__dirname, '..', 'preload', 'preload.js'),
         },
-    });
-    // Load the index.html file
+    }); // Load the index.html file
     mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
     // Open DevTools in development
     if (process.env.NODE_ENV === 'development') {
