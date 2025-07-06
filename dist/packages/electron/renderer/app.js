@@ -2,7 +2,7 @@
 class AppController {
     constructor() {
         this.selectedBundlePath = null;
-    }    initialize() {
+    } initialize() {
         this.setupEventListeners();
         this.loadSettings();
         this.setupProgressListeners();
@@ -148,9 +148,9 @@ class AppController {
             if (!window.electronAPI) {
                 console.error('electronAPI not available');
                 return;
-            }            const enableChoco = document.getElementById('enable-choco')?.checked ?? true;
+            } const enableChoco = document.getElementById('enable-choco')?.checked ?? true;
             const enableWinget = document.getElementById('enable-winget')?.checked ?? true;
-            
+
             // Get package priority order from the drag-and-drop list
             const packagePriority = this.getPackagePriorityOrder();
 
@@ -200,12 +200,12 @@ class AppController {
                 enableChocoCheckbox.checked = settings.enableChoco !== false;
                 console.log('  Set enable-choco to:', enableChocoCheckbox.checked);
                 this.updateToggleAppearance(enableChocoCheckbox);
-            }            if (enableWingetCheckbox) {
+            } if (enableWingetCheckbox) {
                 enableWingetCheckbox.checked = settings.enableWinget !== false;
                 console.log('  Set enable-winget to:', enableWingetCheckbox.checked);
                 this.updateToggleAppearance(enableWingetCheckbox);
             }
-            
+
             // Load package priority order
             if (settings.packagePriority) {
                 this.setPackagePriorityOrder(settings.packagePriority);
@@ -269,7 +269,7 @@ class AppController {
         } else {
             console.error('Could not find toggle elements for:', checkbox.id);
         }
-    }    setupDragAndDrop() {
+    } setupDragAndDrop() {
         const priorityList = document.getElementById('package-priority-list');
         if (!priorityList) return;
 
@@ -288,7 +288,7 @@ class AppController {
             item.addEventListener('dragend', (e) => {
                 item.classList.remove('opacity-50');
                 draggedElement = null;
-                
+
                 // Clean up any drop zone indicators
                 const allItems = priorityList.querySelectorAll('.priority-item');
                 allItems.forEach(item => {
@@ -318,11 +318,11 @@ class AppController {
             item.addEventListener('drop', (e) => {
                 e.preventDefault();
                 item.classList.remove('border-blue-500', 'border-2');
-                
+
                 if (draggedElement && draggedElement !== item) {
                     const rect = item.getBoundingClientRect();
                     const midpoint = rect.top + rect.height / 2;
-                    
+
                     if (e.clientY < midpoint) {
                         // Insert before current item
                         priorityList.insertBefore(draggedElement, item);
@@ -333,13 +333,13 @@ class AppController {
                 }
             });
         });
-        
+
         // Also allow dropping on the container itself
         priorityList.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
         });
-        
+
         priorityList.addEventListener('drop', (e) => {
             e.preventDefault();
             // If dropped on empty space, add to the end
@@ -347,22 +347,22 @@ class AppController {
                 priorityList.appendChild(draggedElement);
             }
         });
-    }getPackagePriorityOrder() {
+    } getPackagePriorityOrder() {
         const priorityList = document.getElementById('package-priority-list');
         if (!priorityList) return ['winget', 'chocolatey']; // Default order
 
         const items = priorityList.querySelectorAll('.priority-item');
         return Array.from(items).map(item => item.dataset.manager);
-    }    setPackagePriorityOrder(priorityOrder) {
+    } setPackagePriorityOrder(priorityOrder) {
         const priorityList = document.getElementById('package-priority-list');
         if (!priorityList || !priorityOrder) return;
 
         // Get all current items
         const items = Array.from(priorityList.querySelectorAll('.priority-item'));
-        
+
         // Clear the list
         priorityList.innerHTML = '';
-        
+
         // Re-add items in the specified order
         priorityOrder.forEach(managerName => {
             const item = items.find(item => item.dataset.manager === managerName);
@@ -370,7 +370,7 @@ class AppController {
                 priorityList.appendChild(item);
             }
         });
-        
+
         // Re-setup drag and drop after reordering
         setTimeout(() => {
             this.setupDragAndDrop();

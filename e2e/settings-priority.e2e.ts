@@ -1,6 +1,6 @@
 // F-02: Manager priority drag-and-drop - E2E test
 import { test, expect } from '@playwright/test';
-import { _electron as electron } from 'playwright';
+import { _electron as electron } from '@playwright/test';
 
 describe('Package Manager Priority Settings', () => {
     let app: any;

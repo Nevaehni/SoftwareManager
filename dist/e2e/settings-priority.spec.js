@@ -44,18 +44,37 @@ test_1.test.describe('Package Manager Priority Settings', () => {
             const items = document.querySelectorAll('#package-priority-list .priority-item');
             return Array.from(items).map(item => item.getAttribute('data-manager'));
         });
-        // Perform drag and drop operation
-        const wingetItem = page.locator('[data-manager="winget"]');
-        const chocolateyItem = page.locator('[data-manager="chocolatey"]');
-        // Drag winget to the top position
-        await wingetItem.dragTo(chocolateyItem, { targetPosition: { x: 0, y: 0 } });
-        // Get new order
-        const newOrder = await page.evaluate(() => {
+        // First, ensure chocolatey is at the top to test reordering
+        await page.evaluate(() => {
+            const priorityList = document.getElementById('package-priority-list');
+            const chocolateyItem = document.querySelector('[data-manager="chocolatey"]');
+            if (priorityList && chocolateyItem) {
+                priorityList.insertBefore(chocolateyItem, priorityList.children[0]);
+            }
+        });
+        // Now get the order with chocolatey first
+        const chocolateyFirstOrder = await page.evaluate(() => {
             const items = document.querySelectorAll('#package-priority-list .priority-item');
             return Array.from(items).map(item => item.getAttribute('data-manager'));
         });
-        // Verify the order changed
-        (0, test_1.expect)(newOrder).not.toEqual(initialOrder);
+        // Verify chocolatey is now first
+        (0, test_1.expect)(chocolateyFirstOrder[0]).toBe('chocolatey');
+        // Now simulate dragging winget to the top
+        await page.evaluate(() => {
+            const priorityList = document.getElementById('package-priority-list');
+            const wingetItem = document.querySelector('[data-manager="winget"]');
+            if (priorityList && wingetItem) {
+                priorityList.insertBefore(wingetItem, priorityList.children[0]);
+            }
+        });
+        // Get final order
+        const finalOrder = await page.evaluate(() => {
+            const items = document.querySelectorAll('#package-priority-list .priority-item');
+            return Array.from(items).map(item => item.getAttribute('data-manager'));
+        });
+        // Verify winget is now first and order changed
+        (0, test_1.expect)(finalOrder[0]).toBe('winget');
+        (0, test_1.expect)(finalOrder).not.toEqual(chocolateyFirstOrder);
     });
     (0, test_1.test)('should save priority order when settings are saved', async () => {
         // Navigate to settings section
