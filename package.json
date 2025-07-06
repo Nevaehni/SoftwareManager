@@ -10,6 +10,7 @@
 		"jest-environment-jsdom": "^30.0.4",
 		"js-yaml": "^4.1.0",
 		"sinon": "^21.0.0",
+		"tailwindcss": "^4.1.11",
 		"ts-jest": "^29.4.0",
 		"typescript": "^5.8.3"
 	},

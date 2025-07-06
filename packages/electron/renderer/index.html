@@ -1,253 +1,501 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Software Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            500: '#475569',
+                            600: '#334155',
+                            700: '#1e293b',
+                        },
+                        corporate: {
+                            blue: '#2563eb',
+                            gray: '#64748b',
+                            dark: '#0f172a'
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-in-out',
+                        'slide-up': 'slideUp 0.2s ease-out',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-            color: #333;
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
+        @keyframes slideUp {
+            from {
+                transform: translateY(10px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
         }
 
-        .header h1 {
-            margin: 0;
-            font-size: 2.5em;
-            font-weight: 300;
-        }
-
-        .header p {
-            margin: 10px 0 0 0;
-            opacity: 0.9;
-        }
-
-        .content {
-            padding: 30px;
-        }
-
-        .section {
-            margin-bottom: 40px;
-            padding: 25px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            background: #fafafa;
-        }
-
-        .section h2 {
-            margin-top: 0;
-            color: #555;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-            font-weight: 400;
-        }
-
-        .button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            margin: 10px 10px 10px 0;
-        }
-
-        .button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .button.secondary {
-            background: #6c757d;
-        }
-
-        .button.secondary:hover:not(:disabled) {
-            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
-        }
-
-        .status {
-            margin-top: 15px;
-            padding: 10px;
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
             border-radius: 4px;
-            min-height: 20px;
         }
 
-        .status.success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .settings-group {
-            margin: 20px 0;
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            margin: 15px 0;
-        }
-
-        .checkbox-group input[type="checkbox"] {
-            margin-right: 10px;
-            transform: scale(1.2);
-        }
-
-        .checkbox-group label {
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        .file-info {
-            background: #e9ecef;
-            padding: 10px;
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
             border-radius: 4px;
-            margin: 10px 0;
-            font-family: monospace;
-            font-size: 14px;
         }
 
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background: #e0e0e0;
-            border-radius: 10px;
-            overflow: hidden;
-            margin: 15px 0;
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
         }
 
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            transition: width 0.3s ease;
-            width: 0%;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 768px) {
-            .grid {
-                grid-template-columns: 1fr;
-            }
-
-            .container {
-                margin: 10px;
-            }
-
-            .content {
-                padding: 20px;
-            }
+        .professional-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
         }
     </style>
 </head>
 
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Software Manager</h1>
-            <p>Backup and restore your software packages with ease</p>
+<body class="h-full bg-gray-50 overflow-hidden">
+    <!-- Professional Desktop Application Container -->
+    <div class="h-screen flex flex-col">
+        <!-- Header/Title Bar -->
+        <div class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-corporate-blue rounded flex items-center justify-center">
+                    <span class="text-white font-bold text-sm">SM</span>
+                </div>
+                <div>
+                    <h1 class="text-gray-900 font-semibold text-lg">Software Manager</h1>
+                    <p class="text-gray-500 text-xs">Package Management Tool</p>
+                </div>
+            </div>
+            <div class="flex space-x-2">
+                <div class="w-3 h-3 bg-gray-300 rounded-full hover:bg-gray-400 cursor-pointer"></div>
+                <div class="w-3 h-3 bg-gray-300 rounded-full hover:bg-gray-400 cursor-pointer"></div>
+                <div class="w-3 h-3 bg-red-500 rounded-full hover:bg-red-600 cursor-pointer"></div>
+            </div>
         </div>
 
-        <div class="content">
-            <div class="grid">
+        <!-- Main Content Area -->
+        <div class="flex-1 flex">
+            <!-- Sidebar Navigation -->
+            <div class="w-64 bg-white border-r border-gray-200 p-4">
+                <nav class="space-y-2">
+                    <a href="#" onclick="showSection('backup')"
+                        class="nav-item active flex items-center space-x-3 px-3 py-2 rounded-md text-white bg-corporate-blue font-medium transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10">
+                            </path>
+                        </svg>
+                        <span>Backup</span>
+                    </a>
+                    <a href="#" onclick="showSection('restore')"
+                        class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                        <span>Restore</span>
+                    </a>
+                    <a href="#" onclick="showSection('settings')"
+                        class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                            </path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span>Settings</span>
+                    </a>
+                    <a href="#" onclick="showSection('about')"
+                        class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>About</span>
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Content Area -->
+            <div class="flex-1 p-6 custom-scrollbar overflow-y-auto bg-gray-50">
                 <!-- Backup Section -->
-                <div id="backup-section" class="section">
-                    <h2>📦 Create Backup</h2>
-                    <p>Create a backup of all your installed packages</p>
-                    <button id="backup-btn" class="button">Create Backup</button>
-                    <div id="backup-status" class="status"></div>
-                    <div id="backup-progress" class="progress-bar" style="display: none;">
-                        <div class="progress-fill"></div>
+                <div id="backup-section" class="content-section">
+                    <div class="professional-card rounded-lg p-6 mb-6">
+                        <div class="flex items-center space-x-4 mb-6">
+                            <div class="w-10 h-10 bg-corporate-blue rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-semibold text-gray-900">Create Backup</h2>
+                                <p class="text-gray-600">Create a backup of all your installed packages</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <h3 class="font-medium text-gray-900 mb-2">Winget Packages</h3>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <span class="text-gray-600 text-sm">Ready to backup</span>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <h3 class="font-medium text-gray-900 mb-2">Chocolatey Packages</h3>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <span class="text-gray-600 text-sm">Ready to backup</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <button id="backup-btn"
+                                class="w-full bg-corporate-blue hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                                <div class="flex items-center justify-center space-x-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10">
+                                        </path>
+                                    </svg>
+                                    <span>Create Backup Bundle</span>
+                                </div>
+                            </button>
+
+                            <div id="backup-progress" class="hidden">
+                                <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                    <div id="backup-progress-bar"
+                                        class="bg-corporate-blue h-2 rounded-full transition-all duration-300"
+                                        style="width: 0%"></div>
+                                </div>
+                                <p class="text-gray-600 text-sm text-center">Creating backup...</p>
+                            </div>
+
+                            <div id="backup-status" class="hidden p-3 rounded-lg border"></div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Restore Section -->
-                <div id="restore-section" class="section">
-                    <h2>🔄 Restore Packages</h2>
-                    <p>Restore packages from a backup file</p>
-                    <button id="select-bundle-btn" class="button secondary">Select Bundle File</button>
-                    <div id="selected-file" class="file-info" style="display: none;"></div>
-                    <button id="restore-btn" class="button" disabled>Restore Packages</button>
-                    <div id="restore-status" class="status"></div>
-                    <div id="restore-progress" class="progress-bar" style="display: none;">
-                        <div class="progress-fill"></div>
+                <div id="restore-section" class="content-section hidden">
+                    <div class="professional-card rounded-lg p-6 mb-6">
+                        <div class="flex items-center space-x-4 mb-6">
+                            <div class="w-10 h-10 bg-gray-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-semibold text-gray-900">Restore Packages</h2>
+                                <p class="text-gray-600">Restore your software packages from a backup bundle</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <h3 class="font-medium text-gray-900 mb-4">Select Backup File</h3>
+                                <div class="space-y-4">
+                                    <button id="select-bundle-btn"
+                                        class="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors shadow-sm">
+                                        <div class="flex items-center justify-center space-x-2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                                                </path>
+                                            </svg>
+                                            <span>Browse for Bundle File</span>
+                                        </div>
+                                    </button>
+
+                                    <div id="selected-file"
+                                        class="hidden bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                        <div class="flex items-center space-x-3">
+                                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <div class="flex-1">
+                                                <p class="text-gray-900 font-medium text-sm">Selected file:</p>
+                                                <p id="selected-bundle-path"
+                                                    class="text-gray-700 text-sm font-mono break-all"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button id="restore-btn" disabled
+                                class="w-full bg-corporate-blue hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                                <div class="flex items-center justify-center space-x-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                    </svg>
+                                    <span>Restore Packages</span>
+                                </div>
+                            </button>
+
+                            <div id="restore-progress" class="hidden">
+                                <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                    <div id="restore-progress-bar"
+                                        class="bg-corporate-blue h-2 rounded-full transition-all duration-300"
+                                        style="width: 0%"></div>
+                                </div>
+                                <p class="text-gray-600 text-sm text-center">Restoring packages...</p>
+                            </div>
+
+                            <div id="restore-status" class="hidden p-3 rounded-lg border"></div>
+                        </div>
                     </div>
                 </div>
-            </div> <!-- Settings Section -->
-            <div id="settings-section" class="section">
-                <h2>⚙️ Settings</h2>
-                <div class="settings-group">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="enable-winget" />
-                        <label for="enable-winget">Enable Winget package manager</label>
-                    </div>
-                    <p style="font-size: 14px; color: #666; margin-left: 32px;">
-                        When enabled, Winget packages will be included in backups and restores
-                    </p>
 
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="enable-choco" />
-                        <label for="enable-choco">Enable Chocolatey package manager</label>
+                <!-- Settings Section -->
+                <div id="settings-section" class="content-section hidden">
+                    <div class="professional-card rounded-lg p-6 mb-6">
+                        <div class="flex items-center space-x-4 mb-6">
+                            <div class="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                                    </path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-semibold text-gray-900">Settings</h2>
+                                <p class="text-gray-600">Configure package managers and application preferences</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <h3 class="font-medium text-gray-900 mb-4">Package Managers</h3>
+                                <div class="space-y-4">
+                                    <label class="flex items-center space-x-3 cursor-pointer">
+                                        <div class="relative">
+                                            <input type="checkbox" id="enable-winget" class="sr-only">
+                                            <div
+                                                class="toggle-bg w-11 h-6 bg-gray-300 rounded-full shadow-inner transition-colors duration-200">
+                                            </div>
+                                            <div
+                                                class="toggle-dot absolute w-4 h-4 bg-white rounded-full shadow top-1 left-1 transition-transform duration-200">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-900 font-medium">Enable Winget</span>
+                                            <p class="text-gray-600 text-sm">Windows Package Manager for installing and
+                                                managing applications</p>
+                                        </div>
+                                    </label>
+
+                                    <label class="flex items-center space-x-3 cursor-pointer">
+                                        <div class="relative">
+                                            <input type="checkbox" id="enable-choco" class="sr-only">
+                                            <div
+                                                class="toggle-bg w-11 h-6 bg-gray-300 rounded-full shadow-inner transition-colors duration-200">
+                                            </div>
+                                            <div
+                                                class="toggle-dot absolute w-4 h-4 bg-white rounded-full shadow top-1 left-1 transition-transform duration-200">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-900 font-medium">Enable Chocolatey</span>
+                                            <p class="text-gray-600 text-sm">The package manager for Windows with a
+                                                large software library</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button id="save-settings-btn"
+                                class="w-full bg-corporate-blue hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors shadow-sm">
+                                <div class="flex items-center justify-center space-x-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span>Save Settings</span>
+                                </div>
+                            </button>
+
+                            <div id="settings-status" class="hidden p-3 rounded-lg border"></div>
+                        </div>
                     </div>
-                    <p style="font-size: 14px; color: #666; margin-left: 32px;">
-                        When enabled, Chocolatey packages will be included in backups and restores
-                    </p>
                 </div>
-                <button id="save-settings-btn" class="button">Save Settings</button>
-                <div id="settings-status" class="status"></div>
-            </div>
 
-            <!-- About Section -->
-            <div class="section">
-                <h2>ℹ️ About</h2>
-                <p>Software Manager v1.0 - Built with Test-Driven Development</p>
-                <p style="font-size: 14px; color: #666;">
-                    This application helps you backup and restore your Windows software packages
-                    using package managers like Winget and Chocolatey.
-                </p>
+                <!-- About Section -->
+                <div id="about-section" class="content-section hidden">
+                    <div class="professional-card rounded-lg p-6 mb-6">
+                        <div class="flex items-center space-x-4 mb-6">
+                            <div class="w-10 h-10 bg-gray-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-semibold text-gray-900">About Software Manager</h2>
+                                <p class="text-gray-600">Information about this application</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <h3 class="font-medium text-gray-900 mb-3">Version Information</h3>
+                                <div class="space-y-2">
+                                    <p class="text-gray-700"><span class="font-medium">Version:</span> 1.0.0</p>
+                                    <p class="text-gray-700"><span class="font-medium">Build:</span> 2025.01.06</p>
+                                    <p class="text-gray-700"><span class="font-medium">Platform:</span> Windows</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <h3 class="font-medium text-gray-900 mb-3">Features</h3>
+                                <ul class="space-y-2 text-gray-700">
+                                    <li class="flex items-center space-x-2">
+                                        <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span>Winget Package Support</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2">
+                                        <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span>Chocolatey Support</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2">
+                                        <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span>Automated Backup</span>
+                                    </li>
+                                    <li class="flex items-center space-x-2">
+                                        <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span>One-Click Restore</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <h3 class="font-medium text-gray-900 mb-3">Description</h3>
+                            <p class="text-gray-700 leading-relaxed">
+                                Software Manager is a professional desktop application built with Test-Driven
+                                Development principles.
+                                It helps you backup and restore your Windows software packages using popular package
+                                managers
+                                like Winget and Chocolatey. Create portable backup bundles of your installed software
+                                and
+                                restore them on any Windows machine with ease.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+    <script>        // Navigation functionality
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active', 'bg-corporate-blue', 'text-white');
+                item.classList.add('text-gray-700', 'hover:text-gray-900', 'hover:bg-gray-100');
+            });
+
+            // Show selected section
+            document.getElementById(sectionName + '-section').classList.remove('hidden');
+
+            // Add active class to selected nav item
+            event.target.closest('.nav-item').classList.add('active', 'bg-corporate-blue', 'text-white');
+            event.target.closest('.nav-item').classList.remove('text-gray-700', 'hover:text-gray-900', 'hover:bg-gray-100');
+        }
+
+        // Toggle functionality for checkboxes
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const toggleBg = this.parentElement.querySelector('.toggle-bg');
+                const toggleDot = this.parentElement.querySelector('.toggle-dot');
+
+                if (this.checked) {
+                    toggleBg.classList.remove('bg-gray-300');
+                    toggleBg.classList.add('bg-corporate-blue');
+                    toggleDot.classList.add('translate-x-5');
+                } else {
+                    toggleBg.classList.remove('bg-corporate-blue');
+                    toggleBg.classList.add('bg-gray-300');
+                    toggleDot.classList.remove('translate-x-5');
+                }
+            });
+        });
+
+        // Initialize the interface
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initialize toggles based on checkbox state
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                const toggleBg = checkbox.parentElement.querySelector('.toggle-bg');
+                const toggleDot = checkbox.parentElement.querySelector('.toggle-dot');
+
+                if (checkbox.checked) {
+                    toggleBg.classList.remove('bg-gray-300');
+                    toggleBg.classList.add('bg-corporate-blue');
+                    toggleDot.classList.add('translate-x-5');
+                }
+            });
+        });
+    </script>
 
     <script src="app.js"></script>
 </body>
