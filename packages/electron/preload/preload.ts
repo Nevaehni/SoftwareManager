@@ -11,12 +11,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // File system operations
     selectFile: (options: any) => ipcRenderer.invoke('select-file', options),
     selectDirectory: () => ipcRenderer.invoke('select-directory'),
-    
+
     // Window controls
     minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
     maximizeWindow: () => ipcRenderer.invoke('maximize-window'),
     closeWindow: () => ipcRenderer.invoke('close-window'),
-    
+
     // Event listeners
     onBackupProgress: (callback: (event: any, ...args: any[]) => void) => ipcRenderer.on('backup-progress', callback),
     onRestoreProgress: (callback: (event: any, ...args: any[]) => void) => ipcRenderer.on('restore-progress', callback),
