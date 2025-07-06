@@ -17,7 +17,7 @@ Built 100 % with **Test-Driven Development (TDD)**, it ships a CLI *and* a moder
 | Category | Delivered | Missing → must ship in v1.0 |
 |----------|-----------|-----------------------------|
 | **Backup & Restore** | ✔ Back up installed packages with progress feedback<br>✔ Restore from a bundle | ▢ **Selective config picker** (folders, files, Registry)<br>▢ **Version pinning** per package in backup |
-| **Package Management (daily use)** | ✔ **Search & install packages** with UI<br>✔ **Winget & Chocolatey integration** | ▢ Update, downgrade, uninstall with version selection |
+| **Package Management (daily use)** | ✔ **Search & install packages** with UI<br>✔ **Winget & Chocolatey integration** | ▢ Uninstall packages with UI |
 | **Package-Manager Bootstrap** | ✔ **One-click install** of Winget / Chocolatey when missing | ▢ Settings UI: **drag-and-drop priority list** of managers |
 | **Priority Ordering** | ✔ Settings UI: **drag-and-drop priority list** of managers | — |
 | **Custom Installer Support** | — | ▢ **Add MSI/EXE** files, include in backup & restore |
@@ -155,7 +155,7 @@ The GUI provides:
 | F-01 | One-click Winget/Choco bootstrap                      | ✅     | `bootstrap.spec.ts`                   |
 | F-02 | Manager priority drag-and-drop                        | ✅     | `settings-priority.e2e.ts`            |
 | F-03 | Search & install packages (UI)                        | ✅     | `packages-search.e2e.ts`<br>`winget-adapter.contract.ts` |
-| F-04 | Update / downgrade with version picker                | ❌     | `version-downgrade.e2e.ts`            |
+| F-04 | Uninstall packages with UI                            | ❌     | `package-uninstall.e2e.ts`           |
 | F-05 | Add custom MSI/EXE to bundle                          | ❌     | `msi-ingest.spec.ts`                  |
 | F-06 | YAML/JSON editor with validation                      | ❌     | `editor.spec.ts`                      |
 | F-07 | Console/log viewer (toggle, copy, filter)             | ❌     | `console-pane.spec.ts`                |
