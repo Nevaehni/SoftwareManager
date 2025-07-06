@@ -61,7 +61,8 @@ export function handleWindowsClosed(): void {
 }
 
 // Main app initialization
-if (require.main === module) {
+// In Electron, require.main is undefined, so we check if we're the main module differently
+if (!module.parent || require.main === module) {
     setupIpcHandlers();
     handleAppReady();
     handleWindowsClosed();

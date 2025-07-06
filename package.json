@@ -21,10 +21,10 @@
 		"test:e2e": "playwright test",
 		"test:all": "npm run test:unit && npm run test:integration && npm run test:contract",
 		"build": "tsc",
-		"electron": "electron packages/electron/main/main.js",
+		"electron": "electron dist/packages/electron/main/main.js",
 		"start": "npm run build && npm run electron",
 		"dev": "tsc --watch",
-		"cli": "node packages/cli/software-manager.js"
+		"cli": "node dist/packages/cli/software-manager.js"
 	},
 	"keywords": [],
 	"author": "",
