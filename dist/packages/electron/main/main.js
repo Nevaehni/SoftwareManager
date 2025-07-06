@@ -218,6 +218,87 @@ function setupIpcHandlers() {
             return { directoryPath: null, error: error instanceof Error ? error.message : 'Unknown error' };
         }
     });
+    // Package search
+    electron_1.ipcMain.handle('search-packages', async (event, query) => {
+        try {
+            console.log('IPC: Received search-packages request for:', query);
+            const execFunction = async (command, args) => {
+                const result = await execAsync(`${command} ${args.join(' ')}`);
+                return {
+                    stdout: result.stdout,
+                    stderr: result.stderr,
+                    exitCode: 0
+                };
+            };
+            const settings = await loadSettings();
+            const allResults = [];
+            // Search with Winget if enabled
+            if (settings.enableWinget !== false) {
+                try {
+                    const wingetAdapter = new winget_adapter_1.WingetAdapter(execFunction);
+                    const wingetResults = await wingetAdapter.search(query);
+                    allResults.push(...wingetResults.map(pkg => ({ ...pkg, source: 'winget' })));
+                }
+                catch (error) {
+                    console.warn('Winget search failed:', error);
+                }
+            }
+            // Search with Chocolatey if enabled
+            if (settings.enableChoco !== false) {
+                try {
+                    const chocoAdapter = new choco_adapter_1.ChocoAdapter(execFunction);
+                    const chocoResults = await chocoAdapter.search(query);
+                    allResults.push(...chocoResults.map(pkg => ({ ...pkg, source: 'chocolatey' })));
+                }
+                catch (error) {
+                    console.warn('Chocolatey search failed:', error);
+                }
+            }
+            console.log(`IPC: Returning ${allResults.length} search results`);
+            return { success: true, packages: allResults };
+        }
+        catch (error) {
+            console.error('Package search failed:', error);
+            return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+    });
+    // Package installation
+    electron_1.ipcMain.handle('install-package', async (event, packageId, source, version) => {
+        try {
+            console.log(`IPC: Received install-package request for ${packageId} from ${source}`);
+            const execFunction = async (command, args) => {
+                const result = await execAsync(`${command} ${args.join(' ')}`);
+                return {
+                    stdout: result.stdout,
+                    stderr: result.stderr,
+                    exitCode: 0
+                };
+            };
+            let adapter;
+            if (source === 'winget') {
+                adapter = new winget_adapter_1.WingetAdapter(execFunction);
+            }
+            else if (source === 'chocolatey') {
+                adapter = new choco_adapter_1.ChocoAdapter(execFunction);
+            }
+            else {
+                throw new Error(`Unknown package source: ${source}`);
+            }
+            const result = await adapter.install(packageId, version);
+            if (result) {
+                console.log(`IPC: Successfully installed ${packageId}`);
+                return { success: true, message: `${packageId} installed successfully` };
+            }
+            else {
+                console.log(`IPC: Failed to install ${packageId}`);
+                return { success: false, error: `Failed to install ${packageId}` };
+            }
+        }
+        catch (error) {
+            console.error('Package installation failed:', error);
+            return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+    });
     // Window controls
     electron_1.ipcMain.handle('minimize-window', () => {
         if (mainWindow) {

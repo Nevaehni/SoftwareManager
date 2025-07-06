@@ -1,4 +1,4 @@
-import { PackageAdapter } from '../../core/src/package-adapter';
+import { PackageAdapter, PackageInfo } from '../../core/src/package-adapter';
 import * as fs from 'fs';
 
 interface ChocoPackage {
@@ -50,9 +50,7 @@ export class ChocoAdapter implements PackageAdapter {
     version: 2.2.2`;
 
         fs.writeFileSync(filename, samplePackageData);
-    }
-
-    async listInstalled(): Promise<ChocoPackage[]> {
+    } async listInstalled(): Promise<PackageInfo[]> {
         this.validateExecFunction();
 
         const result = await this.execFunction!('choco', ['list', '--local-only', '--limit-output']);
@@ -61,10 +59,14 @@ export class ChocoAdapter implements PackageAdapter {
             throw new Error(`Chocolatey list failed: ${result.stderr}`);
         }
 
-        return this.parseChocoList(result.stdout);
-    }
-
-    async search(query: string): Promise<ChocoPackage[]> {
+        const chocoPackages = this.parseChocoList(result.stdout);
+        return chocoPackages.map(pkg => ({
+            id: pkg.id,
+            name: pkg.name,
+            version: pkg.version,
+            source: 'chocolatey'
+        }));
+    } async search(query: string): Promise<PackageInfo[]> {
         this.validateExecFunction();
 
         const result = await this.execFunction!('choco', ['search', query, '--limit-output']);
@@ -73,7 +75,13 @@ export class ChocoAdapter implements PackageAdapter {
             throw new Error(`Chocolatey search failed: ${result.stderr}`);
         }
 
-        return this.parseChocoList(result.stdout);
+        const chocoPackages = this.parseChocoList(result.stdout);
+        return chocoPackages.map(pkg => ({
+            id: pkg.id,
+            name: pkg.name,
+            version: pkg.version,
+            source: 'chocolatey'
+        }));
     }
 
     async install(packageId: string, version?: string): Promise<boolean> {

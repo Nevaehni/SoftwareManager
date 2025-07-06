@@ -6,14 +6,41 @@ class AppController {
         this.setupEventListeners();
         this.loadSettings();
         this.setupProgressListeners();
-        this.setupDragAndDrop();
-        this.setupDragAndDrop();
+        this.setupDragAndDrop(); this.setupDragAndDrop();        this.initializePackageSearch();
+    }initializePackageSearch() {
+        // Function to initialize the package search UI
+        const initSearchUI = () => {
+            if (!window.packageSearchUI) {
+                try {
+                    // PackageSearchUI will be loaded from separate file
+                    if (typeof PackageSearchUI !== 'undefined') {
+                        window.packageSearchUI = new PackageSearchUI();
+                        console.log('Package search UI initialized');
+                    } else {
+                        console.error('PackageSearchUI class not found');
+                    }
+                } catch (error) {
+                    console.error('Failed to initialize package search UI:', error);
+                }
+            }
+        };
 
-        // Auto-test settings save after 3 seconds
+        // Initialize immediately if packages section is visible
         setTimeout(() => {
-            console.log('AUTO-TEST: Running automatic settings save test...');
-            this.handleTestSaveSettings();
-        }, 3000);
+            const packagesSection = document.getElementById('packages');
+            if (packagesSection && !packagesSection.classList.contains('hidden')) {
+                initSearchUI();
+            }
+        }, 200);
+
+        // Also initialize when packages section is shown
+        const packagesNavItem = document.querySelector('a[onclick="showSection(\'packages\')"]');
+        if (packagesNavItem) {
+            packagesNavItem.addEventListener('click', () => {
+                // Delay initialization to ensure DOM is ready
+                setTimeout(initSearchUI, 100);
+            });
+        }
     }
 
     setupEventListeners() {

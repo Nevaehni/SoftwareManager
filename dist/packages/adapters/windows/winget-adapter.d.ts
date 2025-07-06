@@ -1,9 +1,4 @@
-import { PackageAdapter } from '../../core/src/package-adapter';
-interface WingetPackage {
-    Id: string;
-    Name: string;
-    Version: string;
-}
+import { PackageAdapter, PackageInfo } from '../../core/src/package-adapter';
 interface ExecResult {
     stdout: string;
     stderr: string;
@@ -14,7 +9,8 @@ export declare class WingetAdapter implements PackageAdapter {
     private execFunction?;
     constructor(execFunction?: ExecFunction);
     exportList(filename: string): Promise<void>;
-    search(query: string): Promise<WingetPackage[]>;
+    search(query: string): Promise<PackageInfo[]>;
+    private parseWingetSearchOutput;
     install(packageId: string, version?: string): Promise<boolean>;
     ensurePresent(packageId: string): Promise<boolean>;
     private validateExecFunction;

@@ -2,6 +2,19 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const choco_adapter_1 = require("../choco-adapter");
 const adapter_contract_1 = require("./adapter-contract");
+describe('ChocoAdapter', () => {
+    // Mock exec function for testing
+    const mockExecFunction = jest.fn();
+    beforeEach(() => {
+        mockExecFunction.mockReset();
+        mockExecFunction.mockResolvedValue({
+            stdout: 'test-package|1.0.0\n',
+            stderr: '',
+            exitCode: 0
+        });
+    });
+    (0, adapter_contract_1.shouldBehaveLikePackageAdapter)(() => new choco_adapter_1.ChocoAdapter(mockExecFunction));
+});
 describe('ChocoAdapter Contract Tests', () => {
     let mockExec;
     beforeEach(() => {

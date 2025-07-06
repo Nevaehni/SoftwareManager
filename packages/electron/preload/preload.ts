@@ -12,6 +12,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     selectFile: (options: any) => ipcRenderer.invoke('select-file', options),
     selectDirectory: () => ipcRenderer.invoke('select-directory'),
 
+    // Package management
+    searchPackages: (query: string) => ipcRenderer.invoke('search-packages', query),
+    installPackage: (packageId: string, source: string, version?: string) => ipcRenderer.invoke('install-package', packageId, source, version),
+
     // Window controls
     minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
     maximizeWindow: () => ipcRenderer.invoke('maximize-window'),

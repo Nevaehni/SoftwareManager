@@ -11,6 +11,9 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     // File system operations
     selectFile: (options) => electron_1.ipcRenderer.invoke('select-file', options),
     selectDirectory: () => electron_1.ipcRenderer.invoke('select-directory'),
+    // Package management
+    searchPackages: (query) => electron_1.ipcRenderer.invoke('search-packages', query),
+    installPackage: (packageId, source, version) => electron_1.ipcRenderer.invoke('install-package', packageId, source, version),
     // Window controls
     minimizeWindow: () => electron_1.ipcRenderer.invoke('minimize-window'),
     maximizeWindow: () => electron_1.ipcRenderer.invoke('maximize-window'),

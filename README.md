@@ -17,7 +17,7 @@ Built 100 % with **Test-Driven Development (TDD)**, it ships a CLI *and* a moder
 | Category | Delivered | Missing → must ship in v1.0 |
 |----------|-----------|-----------------------------|
 | **Backup & Restore** | ✔ Back up installed packages with progress feedback<br>✔ Restore from a bundle | ▢ **Selective config picker** (folders, files, Registry)<br>▢ **Version pinning** per package in backup |
-| **Package Management (daily use)** | — | ▢ In-app **search, install, update, downgrade, uninstall** with version selection |
+| **Package Management (daily use)** | ✔ **Search & install packages** with UI<br>✔ **Winget & Chocolatey integration** | ▢ Update, downgrade, uninstall with version selection |
 | **Package-Manager Bootstrap** | ✔ **One-click install** of Winget / Chocolatey when missing | ▢ Settings UI: **drag-and-drop priority list** of managers |
 | **Priority Ordering** | ✔ Settings UI: **drag-and-drop priority list** of managers | — |
 | **Custom Installer Support** | — | ▢ **Add MSI/EXE** files, include in backup & restore |
@@ -27,6 +27,18 @@ Built 100 % with **Test-Driven Development (TDD)**, it ships a CLI *and* a moder
 | **Auto-Update (app)** | — | ▢ Self-update check & download |
 | **Accessibility / Theme** | — | ▢ Dark-/light-theme toggle, keyboard navigation |
 | **E2E Coverage** | 🕒 Planned | ▢ Playwright tests for all the above |
+
+### 🔧 Recent Implementation Notes
+
+**F-03: Search & Install Packages (UI) - COMPLETED** ✅  
+The package search functionality has been fully implemented and tested. Key technical solutions:
+
+- **Module Compatibility**: Created browser-compatible JavaScript version (`package-search-ui-browser.js`) to avoid CommonJS export issues
+- **Winget Integration**: Fixed table output parsing to handle real winget command output format instead of expecting JSON
+- **UI Initialization**: Resolved timing issues where PackageSearchUI wasn't initialized when already on packages section
+- **Type Safety**: Added `source` field to `PackageInfo` interface to distinguish between winget/chocolatey packages
+
+Users can now search for packages (e.g., "discord"), see live results with install buttons, and install directly from the UI.
 
 > **TDD rule:**  
 > _No user-facing feature in the "Missing" column may be implemented without first committing a failing test (unit, contract, integration or E2E as appropriate)._
@@ -142,7 +154,7 @@ The GUI provides:
 |------|------------------------------------------------------|--------|---------------------------------------|
 | F-01 | One-click Winget/Choco bootstrap                      | ✅     | `bootstrap.spec.ts`                   |
 | F-02 | Manager priority drag-and-drop                        | ✅     | `settings-priority.e2e.ts`            |
-| F-03 | Search & install packages (UI)                        | ❌     | `packages-search.e2e.ts`<br>`winget-adapter.contract.ts` |
+| F-03 | Search & install packages (UI)                        | ✅     | `packages-search.e2e.ts`<br>`winget-adapter.contract.ts` |
 | F-04 | Update / downgrade with version picker                | ❌     | `version-downgrade.e2e.ts`            |
 | F-05 | Add custom MSI/EXE to bundle                          | ❌     | `msi-ingest.spec.ts`                  |
 | F-06 | YAML/JSON editor with validation                      | ❌     | `editor.spec.ts`                      |

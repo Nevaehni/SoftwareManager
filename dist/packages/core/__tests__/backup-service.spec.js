@@ -45,7 +45,10 @@ describe('BackupService', () => {
     it('BackupService_callsExport', async () => {
         // Red phase: test for delegating to PackageAdapter.exportList
         const mockAdapter = {
-            exportList: sinon.spy()
+            exportList: sinon.spy(),
+            search: sinon.stub().resolves([]),
+            install: sinon.stub().resolves(true),
+            ensurePresent: sinon.stub().resolves(true)
         };
         const backupService = new backup_service_1.BackupService(mockAdapter);
         await backupService.run();
@@ -55,7 +58,10 @@ describe('BackupService', () => {
     it('BackupService_respectsSettings', async () => {
         // Red phase: test for respecting settings that disable managers
         const mockAdapter = {
-            exportList: sinon.spy()
+            exportList: sinon.spy(),
+            search: sinon.stub().resolves([]),
+            install: sinon.stub().resolves(true),
+            ensurePresent: sinon.stub().resolves(true)
         };
         const settings = { enableChoco: false };
         const backupService = new backup_service_1.BackupService(mockAdapter, settings);
@@ -65,10 +71,16 @@ describe('BackupService', () => {
     it('BackupService_multipleAdapters', async () => {
         // Test for handling multiple adapters
         const mockWingetAdapter = {
-            exportList: sinon.stub().resolves()
+            exportList: sinon.stub().resolves(),
+            search: sinon.stub().resolves([]),
+            install: sinon.stub().resolves(true),
+            ensurePresent: sinon.stub().resolves(true)
         };
         const mockChocoAdapter = {
-            exportList: sinon.stub().resolves()
+            exportList: sinon.stub().resolves(),
+            search: sinon.stub().resolves([]),
+            install: sinon.stub().resolves(true),
+            ensurePresent: sinon.stub().resolves(true)
         };
         const backupService = new backup_service_1.BackupService();
         backupService.addAdapter('winget', mockWingetAdapter);
@@ -80,10 +92,16 @@ describe('BackupService', () => {
     it('BackupService_disabledAdapter', async () => {
         // Test that disabled adapters are not called
         const mockWingetAdapter = {
-            exportList: sinon.stub().resolves()
+            exportList: sinon.stub().resolves(),
+            search: sinon.stub().resolves([]),
+            install: sinon.stub().resolves(true),
+            ensurePresent: sinon.stub().resolves(true)
         };
         const mockChocoAdapter = {
-            exportList: sinon.stub().resolves()
+            exportList: sinon.stub().resolves(),
+            search: sinon.stub().resolves([]),
+            install: sinon.stub().resolves(true),
+            ensurePresent: sinon.stub().resolves(true)
         };
         const settings = { enableChoco: false };
         const backupService = new backup_service_1.BackupService(undefined, settings);

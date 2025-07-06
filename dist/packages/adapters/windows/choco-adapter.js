@@ -71,7 +71,13 @@ class ChocoAdapter {
         if (result.exitCode !== 0) {
             throw new Error(`Chocolatey list failed: ${result.stderr}`);
         }
-        return this.parseChocoList(result.stdout);
+        const chocoPackages = this.parseChocoList(result.stdout);
+        return chocoPackages.map(pkg => ({
+            id: pkg.id,
+            name: pkg.name,
+            version: pkg.version,
+            source: 'chocolatey'
+        }));
     }
     async search(query) {
         this.validateExecFunction();
@@ -79,7 +85,13 @@ class ChocoAdapter {
         if (result.exitCode !== 0) {
             throw new Error(`Chocolatey search failed: ${result.stderr}`);
         }
-        return this.parseChocoList(result.stdout);
+        const chocoPackages = this.parseChocoList(result.stdout);
+        return chocoPackages.map(pkg => ({
+            id: pkg.id,
+            name: pkg.name,
+            version: pkg.version,
+            source: 'chocolatey'
+        }));
     }
     async install(packageId, version) {
         this.validateExecFunction();

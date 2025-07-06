@@ -10,7 +10,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // File system operations
     selectFile: (options) => ipcRenderer.invoke('select-file', options),
-    selectDirectory: () => ipcRenderer.invoke('select-directory'),    // Event listeners
+    selectDirectory: () => ipcRenderer.invoke('select-directory'),
+
+    // Package management
+    searchPackages: (query) => ipcRenderer.invoke('search-packages', query),
+    installPackage: (packageId, source, version) => ipcRenderer.invoke('install-package', packageId, source, version),
+
+    // Event listeners
     onBackupProgress: (callback) => ipcRenderer.on('backup-progress', callback),
     onRestoreProgress: (callback) => ipcRenderer.on('restore-progress', callback),
 

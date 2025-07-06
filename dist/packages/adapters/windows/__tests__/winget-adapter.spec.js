@@ -37,13 +37,13 @@ const winget_adapter_1 = require("../winget-adapter");
 const sinon = __importStar(require("sinon"));
 describe('WingetAdapter Unit Tests', () => {
     it('Winget_search_parses', async () => {
-        // Red phase: Test that search() parses JSON output from winget search
-        const mockJson = JSON.stringify([
-            { "Id": "Git.Git", "Name": "Git", "Version": "2.42.0" },
-            { "Id": "Microsoft.VisualStudioCode", "Name": "Visual Studio Code", "Version": "1.85.0" }
-        ]);
+        // Red phase: Test that search() parses table output from winget search
+        const mockTableOutput = `   - Name                       Id                                  Version                                                          Match                Source
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+Git                        Git.Git                             2.42.0                                                                                winget
+Visual Studio Code         Microsoft.VisualStudioCode          1.85.0                                                                                winget`;
         const execStub = sinon.stub().resolves({
-            stdout: mockJson,
+            stdout: mockTableOutput,
             stderr: '',
             exitCode: 0
         });
@@ -51,9 +51,9 @@ describe('WingetAdapter Unit Tests', () => {
         const results = await adapter.search('git');
         expect(Array.isArray(results)).toBe(true);
         expect(results.length).toBeGreaterThan(0);
-        expect(results[0]).toHaveProperty('Id');
-        expect(results[0]).toHaveProperty('Name');
-        expect(results[0]).toHaveProperty('Version');
+        expect(results[0]).toHaveProperty('id');
+        expect(results[0]).toHaveProperty('name');
+        expect(results[0]).toHaveProperty('version');
         expect(execStub.calledOnce).toBe(true);
         expect(execStub.calledWith('winget', ['search', 'git', '--accept-source-agreements'])).toBe(true);
     });

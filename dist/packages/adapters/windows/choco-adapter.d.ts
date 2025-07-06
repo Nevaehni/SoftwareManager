@@ -1,9 +1,4 @@
-import { PackageAdapter } from '../../core/src/package-adapter';
-interface ChocoPackage {
-    id: string;
-    name: string;
-    version: string;
-}
+import { PackageAdapter, PackageInfo } from '../../core/src/package-adapter';
 interface ExecResult {
     stdout: string;
     stderr: string;
@@ -14,8 +9,8 @@ export declare class ChocoAdapter implements PackageAdapter {
     private execFunction?;
     constructor(execFunction?: ExecFunction);
     exportList(filename: string): Promise<void>;
-    listInstalled(): Promise<ChocoPackage[]>;
-    search(query: string): Promise<ChocoPackage[]>;
+    listInstalled(): Promise<PackageInfo[]>;
+    search(query: string): Promise<PackageInfo[]>;
     install(packageId: string, version?: string): Promise<boolean>;
     ensurePresent(packageId: string): Promise<boolean>;
     private parseChocoList;

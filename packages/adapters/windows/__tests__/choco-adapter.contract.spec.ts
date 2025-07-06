@@ -9,6 +9,22 @@ interface ExecResult {
 }
 type ExecFunction = (command: string, args: string[]) => Promise<ExecResult>;
 
+describe('ChocoAdapter', () => {
+    // Mock exec function for testing
+    const mockExecFunction = jest.fn();
+
+    beforeEach(() => {
+        mockExecFunction.mockReset();
+        mockExecFunction.mockResolvedValue({
+            stdout: 'test-package|1.0.0\n',
+            stderr: '',
+            exitCode: 0
+        });
+    });
+
+    shouldBehaveLikePackageAdapter(() => new ChocoAdapter(mockExecFunction));
+});
+
 describe('ChocoAdapter Contract Tests', () => {
     let mockExec: jest.MockedFunction<ExecFunction>;
 

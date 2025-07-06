@@ -1,1 +1,1 @@
-{"version":3,"file":"adapter-contract.d.ts","sourceRoot":"","sources":["../../../../../packages/adapters/windows/__tests__/adapter-contract.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,cAAc,EAAE,MAAM,mCAAmC,CAAC;AAEnE;;GAEG;AACH,wBAAgB,8BAA8B,CAAC,OAAO,EAAE,MAAM,cAAc,QA0B3E"}
+{"version":3,"file":"adapter-contract.d.ts","sourceRoot":"","sources":["../../../../../packages/adapters/windows/__tests__/adapter-contract.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,cAAc,EAAE,MAAM,mCAAmC,CAAC;AAEnE;;GAEG;AACH,wBAAgB,8BAA8B,CAAC,OAAO,EAAE,MAAM,cAAc,QA+E3E"}
