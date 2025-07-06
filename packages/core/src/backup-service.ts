@@ -76,10 +76,14 @@ export class BackupService {
             }
         }
 
-        this.progressCallback?.(90, 'Finalizing backup...');
-
-        // Write combined output
+        this.progressCallback?.(90, 'Finalizing backup...');        // Write combined output
         const finalContent = combinedPackages.join('\n');
+
+        // Ensure tmp directory exists
+        if (!fs.existsSync('tmp')) {
+            fs.mkdirSync('tmp', { recursive: true });
+        }
+
         fs.writeFileSync('tmp/spec.yaml', finalContent || '');
 
         this.progressCallback?.(100, 'Backup completed successfully!');
