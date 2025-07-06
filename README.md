@@ -2,12 +2,12 @@
 
 **A comprehensive package-backup, restore & day-to-day package-management tool for Windows**  
 
-[![Tests](https://img.shields.io/badge/tests-58%20passing-brightgreen)](./package.json)  
+[![Tests](https://img.shields.io/badge/tests-56%20passing-brightgreen)](./package.json)  
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-blue)](./package.json)  
 [![Electron](https://img.shields.io/badge/Electron-37.2.0-47848f)](./package.json)  
 [![Version](https://img.shields.io/badge/version-1.0.0-success)](./packages/cli/software-manager.ts)
 
-SoftwareManager lets you **back up, restore and actively manage** your installed software across Windows package managers (Winget, Chocolatey, Scoop).  
+SoftwareManager lets you **back up, restore and actively manage** your installed software across Windows package managers (Winget, Chocolatey).  
 Built 100 % with **Test-Driven Development (TDD)**, it ships a CLI *and* a modern Electron GUI.
 
 ---
@@ -18,7 +18,7 @@ Built 100 % with **Test-Driven Development (TDD)**, it ships a CLI *and* a moder
 |----------|-----------|-----------------------------|
 | **Backup & Restore** | ✔ Back up installed packages with progress feedback<br>✔ Restore from a bundle | ▢ **Selective config picker** (folders, files, Registry)<br>▢ **Version pinning** per package in backup |
 | **Package Management (daily use)** | — | ▢ In-app **search, install, update, downgrade, uninstall** with version selection |
-| **Package-Manager Bootstrap** | — | ▢ **One-click install** of Winget / Chocolatey / Scoop when missing |
+| **Package-Manager Bootstrap** | — | ▢ **One-click install** of Winget / Chocolatey when missing |
 | **Priority Ordering** | — | ▢ Settings UI: **drag-and-drop priority list** of managers |
 | **Custom Installer Support** | — | ▢ **Add MSI/EXE** files, include in backup & restore |
 | **Spec Editor** | — | ▢ Built-in **YAML/JSON editor** (Monaco) with schema validation & diff |
@@ -128,7 +128,8 @@ The GUI provides:
 - **Drag-and-drop restore** functionality
 - **Settings management** with package manager preferences
 - **Progress tracking** with real-time feedback
-- **Professional styling** with Tailwind CSS
+- **Professional styling** with Tailwind CSS utility-first framework
+- **Modern responsive design** optimized for desktop use
 
 ---
 
@@ -136,7 +137,7 @@ The GUI provides:
 
 | ID   | Feature                                              | Status | Test Suite                            |
 |------|------------------------------------------------------|--------|---------------------------------------|
-| F-01 | One-click Winget/Choco/Scoop bootstrap                | ❌     | `bootstrap.spec.ts`                   |
+| F-01 | One-click Winget/Choco bootstrap                      | ❌     | `bootstrap.spec.ts`                   |
 | F-02 | Manager priority drag-and-drop                        | ❌     | `settings-priority.e2e.ts`            |
 | F-03 | Search & install packages (UI)                        | ❌     | `packages-search.e2e.ts`<br>`winget-adapter.contract.ts` |
 | F-04 | Update / downgrade with version picker                | ❌     | `version-downgrade.e2e.ts`            |
@@ -150,6 +151,24 @@ The GUI provides:
 | F-12 | Accessibility & dark/light theme                      | ❌     | `a11y-theme.e2e.ts`                   |
 
 *The CI pipeline fails if any entry marked ❌ lacks at least one **failing-then-passing** test.*
+
+---
+
+## 🎨 Technology Stack
+
+**Frontend & Styling:**
+- **Tailwind CSS 4.1.11** - Utility-first CSS framework for rapid UI development
+- **Vanilla JavaScript/TypeScript** - No frontend framework dependencies
+- **Electron** - Cross-platform desktop app framework
+
+**Backend & Core:**
+- **Node.js 18+** - Runtime environment
+- **TypeScript 5.8.3** - Type-safe JavaScript
+- **Jest** - Testing framework with 90%+ coverage requirement
+
+**Package Managers Supported:**
+- **Winget** - Windows Package Manager (built-in Windows 10/11)  
+- **Chocolatey** - The package manager for Windows
 
 ---
 
@@ -188,37 +207,6 @@ packages/
 
 ---
 
-SoftwareManager follows a clean, modular architecture:
-
-```
-packages/
-├── core/                    # Business logic & services
-│   ├── backup-service.ts    # Backup orchestration
-│   ├── restore-service.ts   # Restore operations
-│   ├── settings.ts          # Configuration management
-│   └── package-manager-detector.ts
-├── adapters/                # Package manager integrations
-│   └── windows/
-│       ├── winget-adapter.ts    # Windows Package Manager
-│       └── choco-adapter.ts     # Chocolatey
-├── cli/                     # Command-line interface
-│   └── software-manager.ts
-├── electron/                # Desktop GUI application
-│   ├── main/               # Electron main process
-│   ├── preload/           # Security bridge
-│   └── renderer/          # UI components
-└── integration/           # Cross-component tests
-```
-
-### Key Components
-
-- **BackupService**: Orchestrates package export across managers
-- **RestoreService**: Handles package installation from backups
-- **PackageAdapters**: Abstract interface for different package managers
-- **Settings**: Persistent configuration with JSON storage
-- **CLI**: Full command-line interface with progress reporting
-- **Electron App**: Cross-platform desktop GUI
-
 ## 🧪 Testing (TDD)
 
 **Development mantra:** **Red → Green → Refactor → Commit.**  
@@ -254,9 +242,9 @@ pnpm test --coverage # + coverage gate
 
 ## ⏭ Roadmap (post-v1)
 
-* macOS & Linux adapters (Homebrew, APT, …)
 * Cloud backup (encrypted)
 * Bulk operations from CLI (`install <bundle>.zip` straight to fresh PC)
+* Additional package manager support as requested by community
 
 ---
 
