@@ -3,14 +3,22 @@ import { Settings } from './settings';
 interface ProgressCallback {
     (progress: number, message: string): void;
 }
+interface VersionPins {
+    [packageId: string]: string;
+}
 export declare class BackupService {
     private adapters;
     private settings?;
     private progressCallback?;
     private customInstallerService;
     private customInstallers;
+    private versionPins;
     constructor(adapter?: PackageAdapter, settings?: Settings);
     setProgressCallback(callback: ProgressCallback): void;
+    /**
+     * Set version pinning for specific packages
+     */
+    setVersionPinning(versionPins: VersionPins): void;
     addAdapter(name: string, adapter: PackageAdapter): void;
     /**
      * Add a custom MSI/EXE installer to be included in the backup

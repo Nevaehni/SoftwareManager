@@ -40,6 +40,7 @@ class BackupService {
     constructor(adapter, settings) {
         this.adapters = [];
         this.customInstallers = [];
+        this.versionPins = {};
         // Maintain backward compatibility
         if (adapter) {
             this.adapters.push({
@@ -53,6 +54,22 @@ class BackupService {
     }
     setProgressCallback(callback) {
         this.progressCallback = callback;
+    }
+    /**
+     * Set version pinning for specific packages
+     */
+    setVersionPinning(versionPins) {
+        // Validate version format
+        for (const [packageId, version] of Object.entries(versionPins)) {
+            if (!version || version.trim() === '') {
+                throw new Error(`Invalid version format for package ${packageId}: version cannot be empty`);
+            }
+            // Basic version format validation (allows semantic versioning patterns)
+            if (!/^[\d]+[\d\w\.\-]*$/i.test(version.trim())) {
+                throw new Error(`Invalid version format for package ${packageId}: ${version}`);
+            }
+        }
+        this.versionPins = { ...versionPins };
     }
     addAdapter(name, adapter) {
         this.adapters.push({
@@ -77,26 +94,50 @@ class BackupService {
         if (!fs.existsSync('tmp')) {
             fs.mkdirSync('tmp', { recursive: true });
         }
-        this.progressCallback?.(0, 'Starting backup...'); // Create combined backup with packages from all enabled adapters
+        this.progressCallback?.(0, 'Starting backup...');
+        // Create combined backup with packages from all enabled adapters
         let combinedPackages = [];
         const enabledAdapters = this.adapters.filter(config => config.enabled);
         // Sort adapters by priority order if specified in settings
         const prioritizedAdapters = this.sortAdaptersByPriority(enabledAdapters);
+        // Track version pin metadata
+        const versionPinMetadata = [];
         for (let i = 0; i < prioritizedAdapters.length; i++) {
             const config = prioritizedAdapters[i];
             const progress = Math.round((i / prioritizedAdapters.length) * 80); // Reserve 20% for final steps
             this.progressCallback?.(progress, `Exporting ${config.name} packages...`);
-            const tempFile = `tmp/${config.name}-packages.yaml`;
             try {
-                await config.adapter.exportList(tempFile);
-                // Read the generated file and extract packages
-                if (fs.existsSync(tempFile)) {
-                    const content = fs.readFileSync(tempFile, 'utf8');
+                // Use listInstalled if available to get package information for version pinning
+                if (config.adapter.listInstalled && Object.keys(this.versionPins).length > 0) {
+                    const installedPackages = await config.adapter.listInstalled();
                     combinedPackages.push(`# ${config.name.toUpperCase()} packages`);
-                    combinedPackages.push(content);
+                    combinedPackages.push('packages:');
+                    for (const pkg of installedPackages) {
+                        const pinnedVersion = this.versionPins[pkg.id];
+                        const versionToUse = pinnedVersion || pkg.version;
+                        // Track version pin metadata
+                        if (pinnedVersion && pinnedVersion !== pkg.version) {
+                            versionPinMetadata.push(`# ${pkg.id}: ${pinnedVersion} (pinned from ${pkg.version})`);
+                        }
+                        combinedPackages.push(`  - id: ${pkg.id}`);
+                        combinedPackages.push(`    name: ${pkg.name}`);
+                        combinedPackages.push(`    version: ${versionToUse}`);
+                    }
                     combinedPackages.push(''); // Add empty line between sections
-                    // Clean up temp file
-                    fs.unlinkSync(tempFile);
+                }
+                else {
+                    // Fallback to original exportList method when no version pinning or listInstalled not available
+                    const tempFile = `tmp/${config.name}-packages.yaml`;
+                    await config.adapter.exportList(tempFile);
+                    // Read the generated file and extract packages
+                    if (fs.existsSync(tempFile)) {
+                        const content = fs.readFileSync(tempFile, 'utf8');
+                        combinedPackages.push(`# ${config.name.toUpperCase()} packages`);
+                        combinedPackages.push(content);
+                        combinedPackages.push(''); // Add empty line between sections
+                        // Clean up temp file
+                        fs.unlinkSync(tempFile);
+                    }
                 }
             }
             catch (error) {
@@ -125,7 +166,15 @@ class BackupService {
                 combinedPackages.push('');
             }
         }
-        this.progressCallback?.(95, 'Finalizing backup...'); // Write combined output
+        // Add version pinning metadata if any pins were applied
+        if (versionPinMetadata.length > 0) {
+            combinedPackages.push('# VERSION PINNING');
+            combinedPackages.push('# The following packages have been pinned to specific versions:');
+            combinedPackages.push(...versionPinMetadata);
+            combinedPackages.push('');
+        }
+        this.progressCallback?.(95, 'Finalizing backup...');
+        // Write combined output
         const finalContent = combinedPackages.join('\n');
         // Ensure tmp directory exists
         if (!fs.existsSync('tmp')) {

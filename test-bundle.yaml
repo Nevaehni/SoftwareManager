@@ -1,0 +1,13 @@
+packages:
+  - id: Git.Git
+    name: Git
+    version: 2.45.0
+  - id: Microsoft.VisualStudioCode
+    name: Visual Studio Code
+    version: 1.90.0
+  - id: Discord.Discord
+    name: Discord
+    version: 1.0.9196
+  - id: Notepad++.Notepad++
+    name: Notepad++
+    version: 8.5.0

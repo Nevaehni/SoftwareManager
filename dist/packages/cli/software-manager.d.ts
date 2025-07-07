@@ -19,7 +19,8 @@ declare class SoftwareManagerCLI {
         exitCode: any;
     }>>;
     backup(outputPath?: string): Promise<void>;
-    restore(bundlePath: string): Promise<void>;
+    restore(bundlePath: string, preview?: boolean): Promise<void>;
+    previewRestore(bundlePath: string): Promise<void>;
     listPackages(): Promise<void>;
     showVersion(): void;
     showHelp(): void;

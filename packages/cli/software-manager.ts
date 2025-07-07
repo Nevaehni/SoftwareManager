@@ -129,7 +129,12 @@ class SoftwareManagerCLI {
             console.error('❌ Backup file not created');
             throw error;
         }
-    } async restore(bundlePath: string): Promise<void> {
+    } async restore(bundlePath: string, preview: boolean = false): Promise<void> {
+        if (preview) {
+            await this.previewRestore(bundlePath);
+            return;
+        }
+
         console.log(`🔄 Starting restore from: ${bundlePath}`);
 
         if (!fs.existsSync(bundlePath)) {
@@ -160,6 +165,83 @@ class SoftwareManagerCLI {
                 console.error('Failed packages:');
                 result.failed.forEach(pkg => console.error(`   - ${pkg.id}`));
             }
+            throw error;
+        }
+    }
+
+    async previewRestore(bundlePath: string): Promise<void> {
+        console.log(`🔍 Previewing restore from: ${bundlePath}`);
+
+        if (!fs.existsSync(bundlePath)) {
+            const error = new Error(`Bundle file not found: ${bundlePath}`);
+            console.error(`❌ Bundle file not found: ${bundlePath}`);
+            throw error;
+        }
+
+        const execFunction = await this.createExecFunction();
+        const adapter = new WingetAdapter(execFunction); // Default to Winget for preview
+        const restoreService = new RestoreService(adapter);
+
+        // Set up progress callback
+        restoreService.setProgressCallback((progress: number, message: string) => {
+            console.log(`[${progress}%] ${message}`);
+        });
+
+        try {
+            const preview = await restoreService.previewRestore(bundlePath);
+
+            console.log('\n📊 Restore Preview Report');
+            console.log('═'.repeat(50));
+            console.log(`Total packages in bundle: ${preview.totalPackages}`);
+            console.log('');
+
+            // Summary
+            console.log('📋 Summary:');
+            console.log(`   🆕 New installs: ${preview.summary.willInstall}`);
+            console.log(`   ⬆️  Upgrades: ${preview.summary.willUpgrade}`);
+            console.log(`   ⬇️  Downgrades: ${preview.summary.willDowngrade}`);
+            console.log(`   🔄 Reinstalls: ${preview.summary.willReinstall}`);
+            console.log(`   ⏭️  Skipped: ${preview.summary.willSkip}`);
+            console.log('');
+
+            // Detailed sections
+            if (preview.newInstalls.length > 0) {
+                console.log('🆕 New Installations:');
+                preview.newInstalls.forEach(pkg => {
+                    console.log(`   📦 ${pkg.name} (${pkg.id}) → v${pkg.bundleVersion}`);
+                });
+                console.log('');
+            }
+
+            if (preview.upgrades.length > 0) {
+                console.log('⬆️ Upgrades:');
+                preview.upgrades.forEach(pkg => {
+                    console.log(`   📦 ${pkg.name} (${pkg.id}): v${pkg.installedVersion} → v${pkg.bundleVersion}`);
+                });
+                console.log('');
+            }
+
+            if (preview.downgrades.length > 0) {
+                console.log('⬇️ Downgrades:');
+                preview.downgrades.forEach(pkg => {
+                    console.log(`   📦 ${pkg.name} (${pkg.id}): v${pkg.installedVersion} → v${pkg.bundleVersion}`);
+                });
+                console.log('');
+            }
+
+            if (preview.reinstalls.length > 0) {
+                console.log('🔄 Reinstalls (same version):');
+                preview.reinstalls.forEach(pkg => {
+                    console.log(`   📦 ${pkg.name} (${pkg.id}): v${pkg.installedVersion}`);
+                });
+                console.log('');
+            }
+
+            console.log('💡 To proceed with the restore, run:');
+            console.log(`   software-manager restore "${bundlePath}"`);
+
+        } catch (error) {
+            console.error(`❌ Preview failed: ${error instanceof Error ? error.message : String(error)}`);
             throw error;
         }
     }
@@ -213,6 +295,7 @@ Usage:
 Commands:
   backup [output]      Create a backup of installed packages (default: software-backup.yaml)
   restore <bundle>     Restore packages from a backup bundle
+  preview <bundle>     Preview what would happen during restore (no changes made)
   list                 List currently installed packages
   bootstrap            Install missing package managers (Winget/Chocolatey)
   version              Show version information
@@ -224,10 +307,13 @@ Commands:
 Options:
   --no-choco          Disable Chocolatey package manager
   --no-winget         Disable Winget package manager
+  --preview           Preview restore changes (use with restore command)
 
 Examples:
   software-manager backup
   software-manager backup my-packages.yaml
+  software-manager preview my-packages.yaml
+  software-manager restore my-packages.yaml --preview
   software-manager restore my-packages.yaml
   software-manager list
   software-manager bootstrap
@@ -398,9 +484,7 @@ async function main() {
         enableWinget: !args.includes('--no-winget')
     };
 
-    const cli = new SoftwareManagerCLI(options);
-
-    try {
+    const cli = new SoftwareManagerCLI(options); try {
         switch (command) {
             case 'backup':
                 const outputPath = args[1] || 'software-backup.yaml';
@@ -412,7 +496,17 @@ async function main() {
                     console.error('❌ Error: Bundle path is required for restore command');
                     process.exit(1);
                 }
-                await cli.restore(args[1]);
+                const previewFlag = args.includes('--preview');
+                await cli.restore(args[1], previewFlag);
+                break;
+
+            case 'preview':
+                if (!args[1]) {
+                    console.error('❌ Error: Bundle path is required for preview command');
+                    console.error('Usage: software-manager preview <bundle-path>');
+                    process.exit(1);
+                }
+                await cli.previewRestore(args[1]);
                 break;
 
             case 'list':

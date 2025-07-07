@@ -48,6 +48,124 @@ class RestoreService {
         const parsed = yaml.load(content);
         return parsed.packages || [];
     }
+    /**
+     * Compare version strings to determine version relationship
+     * Returns: 1 if v1 > v2, -1 if v1 < v2, 0 if equal
+     */
+    compareVersions(v1, v2) {
+        // Simple version comparison - can be enhanced later
+        const cleanV1 = v1.replace(/[^\d.]/g, '');
+        const cleanV2 = v2.replace(/[^\d.]/g, '');
+        const parts1 = cleanV1.split('.').map(n => parseInt(n) || 0);
+        const parts2 = cleanV2.split('.').map(n => parseInt(n) || 0);
+        const maxLength = Math.max(parts1.length, parts2.length);
+        for (let i = 0; i < maxLength; i++) {
+            const p1 = parts1[i] || 0;
+            const p2 = parts2[i] || 0;
+            if (p1 > p2)
+                return 1;
+            if (p1 < p2)
+                return -1;
+        }
+        return 0;
+    }
+    /**
+     * Preview what would happen during a restore operation
+     */
+    async previewRestore(bundleFilename) {
+        this.progressCallback?.(0, 'Reading bundle file...');
+        const bundlePackages = await this.readBundle(bundleFilename);
+        this.progressCallback?.(20, 'Getting currently installed packages...');
+        // Get currently installed packages
+        let installedPackages = [];
+        try {
+            if (this.adapter.listInstalled) {
+                installedPackages = await this.adapter.listInstalled();
+            }
+        }
+        catch (error) {
+            console.warn('Failed to list installed packages:', error);
+        }
+        this.progressCallback?.(60, 'Analyzing package differences...');
+        // Create lookup map for installed packages
+        const installedMap = new Map();
+        installedPackages.forEach(pkg => {
+            installedMap.set(pkg.id, pkg);
+        });
+        const newInstalls = [];
+        const upgrades = [];
+        const downgrades = [];
+        const reinstalls = [];
+        const skipped = [];
+        // Analyze each package in the bundle
+        for (const bundlePkg of bundlePackages) {
+            const installed = installedMap.get(bundlePkg.id);
+            if (!installed) {
+                // Package not installed - will be new install
+                newInstalls.push({
+                    id: bundlePkg.id,
+                    name: bundlePkg.name,
+                    bundleVersion: bundlePkg.version,
+                    action: 'install',
+                    reason: 'Package not currently installed'
+                });
+            }
+            else {
+                // Package is installed - compare versions
+                const comparison = this.compareVersions(bundlePkg.version, installed.version);
+                if (comparison > 0) {
+                    // Bundle version is newer - upgrade
+                    upgrades.push({
+                        id: bundlePkg.id,
+                        name: bundlePkg.name,
+                        bundleVersion: bundlePkg.version,
+                        installedVersion: installed.version,
+                        action: 'upgrade',
+                        reason: `Upgrade from ${installed.version} to ${bundlePkg.version}`
+                    });
+                }
+                else if (comparison < 0) {
+                    // Bundle version is older - downgrade
+                    downgrades.push({
+                        id: bundlePkg.id,
+                        name: bundlePkg.name,
+                        bundleVersion: bundlePkg.version,
+                        installedVersion: installed.version,
+                        action: 'downgrade',
+                        reason: `Downgrade from ${installed.version} to ${bundlePkg.version}`
+                    });
+                }
+                else {
+                    // Same version - reinstall
+                    reinstalls.push({
+                        id: bundlePkg.id,
+                        name: bundlePkg.name,
+                        bundleVersion: bundlePkg.version,
+                        installedVersion: installed.version,
+                        action: 'reinstall',
+                        reason: `Same version (${installed.version}) - will reinstall`
+                    });
+                }
+            }
+        }
+        this.progressCallback?.(100, 'Preview analysis complete');
+        const preview = {
+            totalPackages: bundlePackages.length,
+            newInstalls,
+            upgrades,
+            downgrades,
+            reinstalls,
+            skipped,
+            summary: {
+                willInstall: newInstalls.length,
+                willUpgrade: upgrades.length,
+                willDowngrade: downgrades.length,
+                willReinstall: reinstalls.length,
+                willSkip: skipped.length
+            }
+        };
+        return preview;
+    }
     async installPackages(packages) {
         const results = [];
         for (let i = 0; i < packages.length; i++) {

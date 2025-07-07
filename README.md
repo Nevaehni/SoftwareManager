@@ -36,7 +36,7 @@ The dangerous E2E uninstall tests have been skipped using `test.skip()` to preve
 
 | Category | Delivered | Missing → must ship in v1.0 |
 |----------|-----------|-----------------------------|
-| **Backup & Restore** | ✔ Back up installed packages with progress feedback<br>✔ Restore from a bundle | ▢ **Selective config picker** (folders, files, Registry)<br>▢ **Version pinning** per package in backup |
+| **Backup & Restore** | ✔ Back up installed packages with progress feedback<br>✔ Restore from a bundle<br>✔ **Version pinning** per package in backup | ▢ **Selective config picker** (folders, files, Registry) |
 | **Package Management (daily use)** | ✔ **Search & install packages** with UI<br>✔ **Uninstall packages with UI**<br>✔ **Winget & Chocolatey integration** | — |
 | **Package-Manager Bootstrap** | ✔ **One-click install** of Winget / Chocolatey when missing | ▢ Settings UI: **drag-and-drop priority list** of managers |
 | **Priority Ordering** | ✔ Settings UI: **drag-and-drop priority list** of managers | — |
@@ -283,7 +283,7 @@ The GUI provides:
 | F-06 | YAML/JSON editor with validation                      | ✅     | `yaml-json-editor.spec.ts`            |
 | F-07 | Console/log viewer (toggle, copy, filter)             | ✅     | `console.spec.ts`                     |
 | F-08 | Selective config backup (files/registry)              | ❌     | `config-picker.e2e.ts`                |
-| F-09 | Version pinning option in backup wizard               | ❌     | `backup-pin.spec.ts`                  |
+| F-09 | Version pinning option in backup wizard               | ✅     | `backup-pin.spec.ts`                  |
 | F-10 | Differential restore preview                          | ❌     | `restore-diff.e2e.ts`                 |
 | F-11 | Auto-update for SoftwareManager                       | ❌     | `auto-update.spec.ts`                 |
 | F-12 | Accessibility & dark/light theme                      | ❌     | `a11y-theme.e2e.ts`                   |

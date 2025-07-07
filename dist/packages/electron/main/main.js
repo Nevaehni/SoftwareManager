@@ -98,7 +98,7 @@ if (!module.parent || require.main === module) {
 }
 // IPC handlers for renderer communication
 function setupIpcHandlers() {
-    electron_1.ipcMain.handle('backup-packages', async () => {
+    electron_1.ipcMain.handle('backup-packages', async (event, versionPins) => {
         try {
             const execFunction = async (command, args) => {
                 const result = await execAsync(`${command} ${args.join(' ')}`);
@@ -110,6 +110,10 @@ function setupIpcHandlers() {
             };
             const settings = await loadSettings();
             const backupService = new backup_service_1.BackupService(undefined, settings);
+            // Apply version pinning if provided
+            if (versionPins && Object.keys(versionPins).length > 0) {
+                backupService.setVersionPinning(versionPins);
+            }
             // Set up progress reporting
             backupService.setProgressCallback((progress, message) => {
                 if (mainWindow) {
@@ -157,6 +161,32 @@ function setupIpcHandlers() {
         }
         catch (error) {
             console.error('Restore failed:', error);
+            return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+    }); // Preview restore packages
+    electron_1.ipcMain.handle('preview-restore', async (event, bundlePath) => {
+        try {
+            const execFunction = async (command, args) => {
+                const result = await execAsync(`${command} ${args.join(' ')}`);
+                return {
+                    stdout: result.stdout,
+                    stderr: result.stderr,
+                    exitCode: 0
+                };
+            };
+            const adapter = new winget_adapter_1.WingetAdapter(execFunction);
+            const restoreService = new restore_service_1.RestoreService(adapter);
+            // Set up progress reporting
+            restoreService.setProgressCallback((progress, message) => {
+                if (mainWindow) {
+                    mainWindow.webContents.send('preview-progress', { progress, message });
+                }
+            });
+            const preview = await restoreService.previewRestore(bundlePath);
+            return { success: true, preview };
+        }
+        catch (error) {
+            console.error('Preview failed:', error);
             return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
     }); // Get settings
@@ -383,7 +413,6 @@ function setupIpcHandlers() {
     }); // List installed packages
     electron_1.ipcMain.handle('list-installed-packages', async () => {
         try {
-            console.log('IPC: Received list-installed-packages request');
             const execFunction = async (command, args) => {
                 const result = await execAsync(`${command} ${args.join(' ')}`);
                 return {
@@ -393,35 +422,28 @@ function setupIpcHandlers() {
                 };
             };
             const settings = await loadSettings();
-            const allResults = [];
-            // List packages from Winget if enabled
+            const packages = [];
+            // Get packages from Winget if enabled
             if (settings.enableWinget !== false) {
-                try {
-                    const wingetAdapter = new winget_adapter_1.WingetAdapter(execFunction);
-                    const wingetResults = await wingetAdapter.listInstalled();
-                    allResults.push(...wingetResults.map(pkg => ({ ...pkg, source: 'winget' })));
-                }
-                catch (error) {
-                    console.warn('Winget list failed:', error);
+                const wingetAdapter = new winget_adapter_1.WingetAdapter(execFunction);
+                if (wingetAdapter.listInstalled) {
+                    const wingetPackages = await wingetAdapter.listInstalled();
+                    packages.push(...wingetPackages);
                 }
             }
-            // List packages from Chocolatey if enabled
+            // Get packages from Chocolatey if enabled
             if (settings.enableChoco !== false) {
-                try {
-                    const chocoAdapter = new choco_adapter_1.ChocoAdapter(execFunction);
-                    const chocoResults = await chocoAdapter.listInstalled();
-                    allResults.push(...chocoResults.map(pkg => ({ ...pkg, source: 'chocolatey' })));
-                }
-                catch (error) {
-                    console.warn('Chocolatey list failed:', error);
+                const chocoAdapter = new choco_adapter_1.ChocoAdapter(execFunction);
+                if (chocoAdapter.listInstalled) {
+                    const chocoPackages = await chocoAdapter.listInstalled();
+                    packages.push(...chocoPackages);
                 }
             }
-            console.log(`IPC: Returning ${allResults.length} installed packages`);
-            return { success: true, packages: allResults };
+            return { success: true, packages };
         }
         catch (error) {
-            console.error('List installed packages failed:', error);
-            return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+            console.error('Failed to list installed packages:', error);
+            return { success: false, error: error instanceof Error ? error.message : 'Unknown error', packages: [] };
         }
     });
     // Window controls

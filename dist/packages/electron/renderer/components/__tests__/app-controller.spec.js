@@ -7,12 +7,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 global.electronAPI = {
     backupPackages: jest.fn().mockResolvedValue({ success: true }),
     restorePackages: jest.fn().mockResolvedValue({ success: true }),
+    previewRestore: jest.fn().mockResolvedValue({ success: true, preview: { totalPackages: 0, newInstalls: [], upgrades: [], downgrades: [], reinstalls: [], skipped: [], summary: { willInstall: 0, willUpgrade: 0, willDowngrade: 0, willReinstall: 0, willSkip: 0 } } }),
     getSettings: jest.fn().mockResolvedValue({ enableChoco: true }),
     saveSettings: jest.fn().mockResolvedValue({ success: true }),
     selectFile: jest.fn().mockResolvedValue({ filePath: '/test/bundle.yaml' }),
     selectDirectory: jest.fn().mockResolvedValue({ directoryPath: '/test' }),
     onBackupProgress: jest.fn(),
     onRestoreProgress: jest.fn(),
+    onPreviewProgress: jest.fn(),
     removeAllListeners: jest.fn(),
 };
 const app_controller_1 = require("../app-controller");
@@ -26,9 +28,18 @@ describe('Renderer App Controller', () => {
                 <div id="backup-section">
                     <button id="backup-btn">Create Backup</button>
                     <div id="backup-status"></div>
-                </div>
-                <div id="restore-section">
+                </div>                <div id="restore-section">
                     <button id="select-bundle-btn">Select Bundle</button>
+                    <div id="restore-preview-section" class="hidden">
+                        <button id="preview-restore-btn" disabled>Preview Changes</button>
+                        <div id="preview-results" class="hidden">
+                            <div id="preview-new-count">0</div>
+                            <div id="preview-upgrade-count">0</div>
+                            <div id="preview-downgrade-count">0</div>
+                            <div id="preview-reinstall-count">0</div>
+                            <div id="preview-skip-count">0</div>
+                        </div>
+                    </div>
                     <button id="restore-btn" disabled>Restore Packages</button>
                     <div id="restore-status"></div>
                 </div>

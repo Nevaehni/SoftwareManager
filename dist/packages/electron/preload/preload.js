@@ -4,14 +4,17 @@ const electron_1 = require("electron");
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 electron_1.contextBridge.exposeInMainWorld('electronAPI', {
-    backupPackages: () => electron_1.ipcRenderer.invoke('backup-packages'),
+    backupPackages: (versionPins) => electron_1.ipcRenderer.invoke('backup-packages', versionPins),
     restorePackages: (bundlePath) => electron_1.ipcRenderer.invoke('restore-packages', bundlePath),
+    previewRestore: (bundlePath) => electron_1.ipcRenderer.invoke('preview-restore', bundlePath),
     getSettings: () => electron_1.ipcRenderer.invoke('get-settings'),
-    saveSettings: (settings) => electron_1.ipcRenderer.invoke('save-settings', settings), // File system operations
+    saveSettings: (settings) => electron_1.ipcRenderer.invoke('save-settings', settings),
+    // File system operations
     selectFile: (options) => electron_1.ipcRenderer.invoke('select-file', options),
     selectDirectory: () => electron_1.ipcRenderer.invoke('select-directory'),
     selectCustomInstaller: () => electron_1.ipcRenderer.invoke('select-custom-installer'),
-    downloadCustomInstaller: (url) => electron_1.ipcRenderer.invoke('download-custom-installer', url), // Package management
+    downloadCustomInstaller: (url) => electron_1.ipcRenderer.invoke('download-custom-installer', url),
+    // Package management
     searchPackages: (query) => electron_1.ipcRenderer.invoke('search-packages', query),
     installPackage: (packageId, source, version) => electron_1.ipcRenderer.invoke('install-package', packageId, source, version),
     uninstallPackage: (packageId, source) => electron_1.ipcRenderer.invoke('uninstall-package', packageId, source),
@@ -27,6 +30,7 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     // Event listeners
     onBackupProgress: (callback) => electron_1.ipcRenderer.on('backup-progress', callback),
     onRestoreProgress: (callback) => electron_1.ipcRenderer.on('restore-progress', callback),
+    onPreviewProgress: (callback) => electron_1.ipcRenderer.on('preview-progress', callback),
     // Cleanup
     removeAllListeners: (channel) => electron_1.ipcRenderer.removeAllListeners(channel),
 });

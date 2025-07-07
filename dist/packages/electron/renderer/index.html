@@ -368,6 +368,58 @@
                             </div>
                         </div>
 
+                        <!-- Version Pinning Section -->
+                        <div id="version-pinning-section" class="mb-6">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h3 class="font-medium text-gray-900">Version Pinning</h3>
+                                        <p class="text-gray-600 text-sm">Override installed versions for specific
+                                            packages in the backup</p>
+                                    </div>
+                                    <button id="load-packages-btn"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                                        <div class="flex items-center space-x-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                                </path>
+                                            </svg>
+                                            <span>Load Installed Packages</span>
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <!-- Loading State -->
+                                <div id="packages-loading" class="hidden text-center py-8">
+                                    <div
+                                        class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600">
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">Loading installed packages...</p>
+                                </div>
+
+                                <!-- Package List for Version Pinning -->
+                                <div id="version-pin-packages" class="hidden">
+                                    <div class="max-h-64 overflow-y-auto custom-scrollbar">
+                                        <div class="space-y-2" id="pin-package-list">
+                                            <!-- Packages will be loaded here -->
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 flex items-center justify-between text-sm">
+                                        <span id="pinned-count" class="text-gray-600">0 packages pinned</span>
+                                        <button id="clear-pins-btn" class="text-red-600 hover:text-red-700 font-medium">
+                                            Clear All Pins
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Empty State -->
+                                <div id="version-pin-empty" class="text-center py-4 text-gray-500 text-sm">
+                                    Click "Load Installed Packages" to enable version pinning
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="space-y-4">
                             <button id="backup-btn"
                                 class="w-full bg-corporate-blue hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
@@ -451,6 +503,115 @@
                                 <h3 class="font-medium text-gray-900 mb-3">Custom Installers</h3>
                                 <div id="restore-custom-installer-list" class="space-y-2">
                                     <!-- Will be populated when a bundle with custom installers is selected -->
+                                </div>
+                            </div>
+
+                            <!-- Preview Section -->
+                            <div id="restore-preview-section" class="hidden space-y-4">
+                                <button id="preview-restore-btn" disabled
+                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <div class="flex items-center justify-center space-x-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                            </path>
+                                        </svg>
+                                        <span>Preview Changes</span>
+                                    </div>
+                                </button>
+
+                                <!-- Preview Results -->
+                                <div id="preview-results"
+                                    class="hidden bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                    <h3 class="font-medium text-gray-900 mb-4">Preview Results</h3>
+
+                                    <!-- Preview Summary -->
+                                    <div id="preview-summary" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                                        <div class="bg-green-50 rounded-lg p-3 text-center border border-green-200">
+                                            <div class="text-2xl font-bold text-green-600" id="preview-new-count">0
+                                            </div>
+                                            <div class="text-xs text-green-700">New Installs</div>
+                                        </div>
+                                        <div class="bg-blue-50 rounded-lg p-3 text-center border border-blue-200">
+                                            <div class="text-2xl font-bold text-blue-600" id="preview-upgrade-count">0
+                                            </div>
+                                            <div class="text-xs text-blue-700">Upgrades</div>
+                                        </div>
+                                        <div class="bg-orange-50 rounded-lg p-3 text-center border border-orange-200">
+                                            <div class="text-2xl font-bold text-orange-600"
+                                                id="preview-downgrade-count">0</div>
+                                            <div class="text-xs text-orange-700">Downgrades</div>
+                                        </div>
+                                        <div class="bg-yellow-50 rounded-lg p-3 text-center border border-yellow-200">
+                                            <div class="text-2xl font-bold text-yellow-600"
+                                                id="preview-reinstall-count">0</div>
+                                            <div class="text-xs text-yellow-700">Reinstalls</div>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-3 text-center border border-gray-200">
+                                            <div class="text-2xl font-bold text-gray-600" id="preview-skip-count">0
+                                            </div>
+                                            <div class="text-xs text-gray-700">Skipped</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Detailed Preview Lists -->
+                                    <div class="space-y-4">
+                                        <!-- New Installations -->
+                                        <div id="preview-new-installs" class="hidden">
+                                            <h4 class="font-medium text-green-700 mb-2 flex items-center">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                                </svg>
+                                                New Installations
+                                            </h4>
+                                            <div id="preview-new-list" class="space-y-1"></div>
+                                        </div>
+
+                                        <!-- Upgrades -->
+                                        <div id="preview-upgrades" class="hidden">
+                                            <h4 class="font-medium text-blue-700 mb-2 flex items-center">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"></path>
+                                                </svg>
+                                                Upgrades
+                                            </h4>
+                                            <div id="preview-upgrade-list" class="space-y-1"></div>
+                                        </div>
+
+                                        <!-- Downgrades -->
+                                        <div id="preview-downgrades" class="hidden">
+                                            <h4 class="font-medium text-orange-700 mb-2 flex items-center">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"></path>
+                                                </svg>
+                                                Downgrades
+                                            </h4>
+                                            <div id="preview-downgrade-list" class="space-y-1"></div>
+                                        </div>
+
+                                        <!-- Reinstalls -->
+                                        <div id="preview-reinstalls" class="hidden">
+                                            <h4 class="font-medium text-yellow-700 mb-2 flex items-center">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                                    </path>
+                                                </svg>
+                                                Reinstalls (Same Version)
+                                            </h4>
+                                            <div id="preview-reinstall-list" class="space-y-1"></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
