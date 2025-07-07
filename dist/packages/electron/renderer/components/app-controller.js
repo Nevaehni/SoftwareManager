@@ -4,11 +4,42 @@ exports.AppController = void 0;
 class AppController {
     constructor() {
         this.selectedBundlePath = null;
+        this.consoleLogger = null;
     }
     initialize() {
         this.setupEventListeners();
         this.loadSettings();
         this.setupProgressListeners();
+        this.initializeConsoleLogger();
+    }
+    initializeConsoleLogger() {
+        // Initialize console logger when console section is shown
+        const consoleNavItem = document.querySelector('a[onclick="showSection(\'console\')"]');
+        if (consoleNavItem) {
+            consoleNavItem.addEventListener('click', () => {
+                setTimeout(() => {
+                    this.setupConsoleLogger();
+                }, 100);
+            });
+        }
+    }
+    setupConsoleLogger() {
+        if (!this.consoleLogger && typeof window !== 'undefined') {
+            try {
+                // Use global ConsoleLogger if available (browser version)
+                if (typeof ConsoleLogger !== 'undefined') {
+                    this.consoleLogger = new ConsoleLogger();
+                    window.consoleLogger = this.consoleLogger;
+                    console.log('Console logger initialized successfully');
+                }
+                else {
+                    console.warn('ConsoleLogger class not found');
+                }
+            }
+            catch (error) {
+                console.error('Failed to initialize console logger:', error);
+            }
+        }
     }
     setupEventListeners() {
         // Backup functionality
@@ -35,6 +66,10 @@ class AppController {
         try {
             const backupBtn = document.getElementById('backup-btn');
             const statusElement = document.getElementById('backup-status');
+            // Log to console
+            if (this.consoleLogger) {
+                this.consoleLogger.info('Starting backup operation...', 'Backup');
+            }
             // Disable button during backup
             if (backupBtn)
                 backupBtn.disabled = true;
@@ -48,12 +83,25 @@ class AppController {
                 statusElement.textContent = result.success ? 'Backup created successfully!' : 'Backup failed';
                 statusElement.className = result.success ? 'status success' : 'status error';
             }
+            // Log result to console
+            if (this.consoleLogger) {
+                if (result.success) {
+                    this.consoleLogger.success('Backup operation completed successfully', 'Backup');
+                }
+                else {
+                    this.consoleLogger.error('Backup operation failed', 'Backup');
+                }
+            }
             // Re-enable button
             if (backupBtn)
                 backupBtn.disabled = false;
         }
         catch (error) {
             console.error('Backup failed:', error);
+            // Log error to console
+            if (this.consoleLogger) {
+                this.consoleLogger.error(`Backup operation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Backup');
+            }
             const statusElement = document.getElementById('backup-status');
             if (statusElement) {
                 statusElement.textContent = 'Backup failed';
@@ -95,6 +143,10 @@ class AppController {
         try {
             const restoreBtn = document.getElementById('restore-btn');
             const statusElement = document.getElementById('restore-status');
+            // Log to console
+            if (this.consoleLogger) {
+                this.consoleLogger.info(`Starting restore operation from: ${this.selectedBundlePath}`, 'Restore');
+            }
             // Disable button during restore
             if (restoreBtn)
                 restoreBtn.disabled = true;
@@ -114,12 +166,25 @@ class AppController {
                     statusElement.className = 'status error';
                 }
             }
+            // Log result to console
+            if (this.consoleLogger) {
+                if (result.success) {
+                    this.consoleLogger.success('Restore operation completed successfully', 'Restore');
+                }
+                else {
+                    this.consoleLogger.error('Restore operation failed', 'Restore');
+                }
+            }
             // Re-enable button
             if (restoreBtn)
                 restoreBtn.disabled = false;
         }
         catch (error) {
             console.error('Restore failed:', error);
+            // Log error to console
+            if (this.consoleLogger) {
+                this.consoleLogger.error(`Restore operation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Restore');
+            }
             const statusElement = document.getElementById('restore-status');
             if (statusElement) {
                 statusElement.textContent = 'Restore failed';
@@ -180,6 +245,15 @@ class AppController {
         const progressBarElement = document.getElementById(`${type}-progress`);
         const progressFillElement = progressBarElement?.querySelector('.progress-fill');
         const statusElement = document.getElementById(`${type}-status`);
+        // Log progress to console
+        if (this.consoleLogger) {
+            if (type === 'backup') {
+                this.consoleLogger.logBackupProgress(progress, message);
+            }
+            else {
+                this.consoleLogger.logRestoreProgress(progress, message);
+            }
+        }
         if (progressBarElement && progressFillElement && statusElement) {
             // Show progress bar
             progressBarElement.style.display = 'block';

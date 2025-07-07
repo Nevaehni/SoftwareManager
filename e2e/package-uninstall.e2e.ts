@@ -32,10 +32,17 @@ test.describe('Package Uninstall UI', () => {
         // Check if there are installed packages with uninstall buttons
         const installedPackages = page.locator('#installed-packages-list .uninstall-package-btn');
         await expect(installedPackages.first()).toBeVisible({ timeout: 10000 });
-    });
+    }); test.skip('Uninstall_button_uninstalls_package - SKIPPED TO PREVENT ACTUAL UNINSTALLATION', async () => {
+        // DANGER: This test was skipped because it performs actual package uninstallation
+        // which can delete important software like Docker and Git from the system.
+        // 
+        // To safely test uninstall functionality:
+        // 1. Use unit tests with mocked adapters instead
+        // 2. Or create a test environment with dummy packages
+        // 3. Or mock the electron app's uninstall functionality
 
-    test('Uninstall_button_uninstalls_package', async () => {
-        // Test that clicking uninstall actually uninstalls package
+        // Original test code commented out to prevent accidental execution:
+        /*
         await page.click('a[onclick="showSection(\'packages\')"]');
         await page.waitForSelector('#packages-section');
 
@@ -52,6 +59,7 @@ test.describe('Package Uninstall UI', () => {
         // Check that uninstall status is shown
         const status = page.locator('#uninstall-status');
         await expect(status).toContainText('Uninstalling');
+        */
     });
 
     test('Search_and_installed_packages_toggle', async () => {

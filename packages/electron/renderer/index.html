@@ -120,6 +120,43 @@
         .no-drag {
             -webkit-app-region: no-drag;
         }
+
+        /* Console styles */
+        #console-output {
+            background: #1a1a1a;
+            color: #00ff00;
+            line-height: 1.4;
+        }
+
+        .console-log-info {
+            color: #00bfff;
+        }
+
+        .console-log-warn {
+            color: #ffa500;
+        }
+
+        .console-log-error {
+            color: #ff4444;
+        }
+
+        .console-log-success {
+            color: #00ff00;
+        }
+
+        .console-timestamp {
+            color: #888;
+            font-size: 0.85em;
+        }
+
+        .console-log-entry {
+            margin-bottom: 2px;
+            padding: 1px 0;
+        }
+
+        .console-log-entry.filtered {
+            display: none;
+        }
     </style>
 </head>
 
@@ -186,8 +223,7 @@
                                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         </svg>
                         <span>Settings</span>
-                    </a>
-                    <a href="#" onclick="showSection('editor')"
+                    </a> <a href="#" onclick="showSection('editor')"
                         class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -195,6 +231,15 @@
                             </path>
                         </svg>
                         <span>Editor</span>
+                    </a>
+                    <a href="#" onclick="showSection('console')"
+                        class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        <span>Console</span>
                     </a>
                     <a href="#" onclick="showSection('about')"
                         class="nav-item flex items-center space-x-3 px-3 py-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors">
@@ -740,6 +785,109 @@
                     </div>
                 </div>
 
+                <!-- Console Section -->
+                <div id="console-section" class="content-section hidden">
+                    <div class="professional-card rounded-lg p-6 mb-6">
+                        <div class="flex items-center space-x-4 mb-6">
+                            <div class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-semibold text-gray-900">Console / Log Viewer</h2>
+                                <p class="text-gray-600">Real-time command output and application logs</p>
+                            </div>
+                        </div>
+
+                        <!-- Console Controls -->
+                        <div
+                            class="flex items-center justify-between mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <div class="flex items-center space-x-4">
+                                <button id="clear-console-btn"
+                                    class="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                        </path>
+                                    </svg>
+                                    <span>Clear</span>
+                                </button>
+
+                                <button id="copy-logs-btn"
+                                    class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                                        </path>
+                                    </svg>
+                                    <span>Copy All</span>
+                                </button>
+
+                                <div class="flex items-center space-x-2">
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" id="auto-scroll-checkbox" checked
+                                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm text-gray-700">Auto-scroll</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center space-x-2">
+                                    <label for="log-filter" class="text-sm font-medium text-gray-700">Filter:</label>
+                                    <input type="text" id="log-filter" placeholder="Search logs..."
+                                        class="px-3 py-1 border border-gray-300 rounded-md text-sm w-48">
+                                </div>
+
+                                <div class="flex items-center space-x-2">
+                                    <label for="log-level" class="text-sm font-medium text-gray-700">Level:</label>
+                                    <select id="log-level"
+                                        class="px-3 py-1 border border-gray-300 rounded-md bg-white text-sm">
+                                        <option value="all">All</option>
+                                        <option value="info">Info</option>
+                                        <option value="warn">Warning</option>
+                                        <option value="error">Error</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Console Output -->
+                        <div class="border border-gray-300 rounded-lg overflow-hidden bg-gray-900">
+                            <div id="console-output"
+                                class="h-96 p-4 overflow-y-auto custom-scrollbar bg-gray-900 text-green-400 font-mono text-sm">
+                                <div class="text-gray-500">
+                                    <span class="text-blue-400">[INFO]</span>
+                                    <span class="text-gray-400">Software Manager Console</span>
+                                    <br>
+                                    <span class="text-blue-400">[INFO]</span>
+                                    <span class="text-gray-400">Ready to display real-time logs...</span>
+                                    <br>
+                                    <span class="text-gray-600">Execute commands from other sections to see output
+                                        here.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status and Info -->
+                        <div class="mt-4 flex items-center justify-between text-sm text-gray-600">
+                            <div class="flex items-center space-x-4">
+                                <span id="console-status" class="flex items-center space-x-2">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <span>Console Ready</span>
+                                </span>
+                                <span id="log-count">0 logs</span>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                Logs from backup, restore, install and other operations will appear above
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- About Section -->
                 <div id="about-section" class="content-section hidden">
                     <div class="professional-card rounded-lg p-6 mb-6">
@@ -891,6 +1039,7 @@
             });    </script> <!-- Load package search UI component -->
         <script src="components/package-search-ui-browser.js"></script>
         <script src="components/spec-editor-browser.js"></script>
+        <script src="components/console-logger-browser.js"></script>
         <script src="app.js"></script>
 </body>
 

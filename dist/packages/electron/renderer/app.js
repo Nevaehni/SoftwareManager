@@ -2,6 +2,7 @@
 class AppController {
     constructor() {
         this.selectedBundlePath = null;
+        this.consoleLogger = null;
     } initialize() {
         this.setupEventListeners();
         this.loadSettings();
@@ -9,6 +10,36 @@ class AppController {
         this.setupDragAndDrop(); this.setupDragAndDrop(); this.initializePackageSearch();
         this.setupPackageTabs();
         this.initializeEditor();
+        this.initializeConsoleLogger();
+    }
+
+    initializeConsoleLogger() {
+        // Initialize console logger when console section is shown
+        const consoleNavItem = document.querySelector('a[onclick="showSection(\'console\')"]');
+        if (consoleNavItem) {
+            consoleNavItem.addEventListener('click', () => {
+                setTimeout(() => {
+                    this.setupConsoleLogger();
+                }, 100);
+            });
+        }
+    }
+
+    setupConsoleLogger() {
+        if (!this.consoleLogger && typeof window !== 'undefined') {
+            try {
+                // Use global ConsoleLogger if available (browser version)
+                if (typeof ConsoleLogger !== 'undefined') {
+                    this.consoleLogger = new ConsoleLogger();
+                    window.consoleLogger = this.consoleLogger;
+                    console.log('Console logger initialized successfully');
+                } else {
+                    console.warn('ConsoleLogger class not found');
+                }
+            } catch (error) {
+                console.error('Failed to initialize console logger:', error);
+            }
+        }
     } initializePackageSearch() {
         // Function to initialize the package search UI
         const initSearchUI = () => {
@@ -273,15 +304,21 @@ class AppController {
         if (downloadInstallerBtn) {
             downloadInstallerBtn.addEventListener('click', () => this.handleDownloadInstaller());
         }
-    }
-
-    async handleBackup() {
+    } async handleBackup() {
         try {
             console.log('Backup button clicked');
+
+            // Log to console
+            if (this.consoleLogger) {
+                this.consoleLogger.info('Starting backup operation...', 'Backup');
+            }
 
             if (!window.electronAPI) {
                 console.error('electronAPI not available');
                 this.updateStatus('backup-status', '❌ Application error: electronAPI not available', true);
+                if (this.consoleLogger) {
+                    this.consoleLogger.error('electronAPI not available', 'Backup');
+                }
                 return;
             }
 
@@ -295,12 +332,21 @@ class AppController {
 
             if (result.success) {
                 this.updateStatus('backup-status', '✅ Backup completed successfully!', false);
+                if (this.consoleLogger) {
+                    this.consoleLogger.success('Backup operation completed successfully', 'Backup');
+                }
             } else {
                 this.updateStatus('backup-status', `❌ Backup failed: ${result.error || 'Unknown error'}`, true);
+                if (this.consoleLogger) {
+                    this.consoleLogger.error(`Backup operation failed: ${result.error || 'Unknown error'}`, 'Backup');
+                }
             }
         } catch (error) {
             console.error('Backup error:', error);
             this.updateStatus('backup-status', `❌ Backup failed: ${error.message}`, true);
+            if (this.consoleLogger) {
+                this.consoleLogger.error(`Backup operation failed: ${error.message}`, 'Backup');
+            }
         } finally {
             const backupBtn = document.getElementById('backup-btn');
             if (backupBtn) backupBtn.disabled = false;
@@ -341,20 +387,29 @@ class AppController {
         } catch (error) {
             console.error('File selection error:', error);
         }
-    }
-
-    async handleRestore() {
+    } async handleRestore() {
         if (!this.selectedBundlePath) {
             this.updateStatus('restore-status', '❌ Please select a bundle file first', true);
+            if (this.consoleLogger) {
+                this.consoleLogger.error('No bundle file selected for restore', 'Restore');
+            }
             return;
         }
 
         try {
             console.log('Restore button clicked');
 
+            // Log to console
+            if (this.consoleLogger) {
+                this.consoleLogger.info(`Starting restore operation from: ${this.selectedBundlePath}`, 'Restore');
+            }
+
             if (!window.electronAPI) {
                 console.error('electronAPI not available');
                 this.updateStatus('restore-status', '❌ Application error: electronAPI not available', true);
+                if (this.consoleLogger) {
+                    this.consoleLogger.error('electronAPI not available', 'Restore');
+                }
                 return;
             }
 
@@ -367,12 +422,21 @@ class AppController {
 
             if (result.success) {
                 this.updateStatus('restore-status', '✅ Restore completed successfully!', false);
+                if (this.consoleLogger) {
+                    this.consoleLogger.success('Restore operation completed successfully', 'Restore');
+                }
             } else {
                 this.updateStatus('restore-status', `❌ Restore failed: ${result.error || 'Unknown error'}`, true);
+                if (this.consoleLogger) {
+                    this.consoleLogger.error(`Restore operation failed: ${result.error || 'Unknown error'}`, 'Restore');
+                }
             }
         } catch (error) {
             console.error('Restore error:', error);
             this.updateStatus('restore-status', `❌ Restore failed: ${error.message}`, true);
+            if (this.consoleLogger) {
+                this.consoleLogger.error(`Restore operation failed: ${error.message}`, 'Restore');
+            }
         } finally {
             const restoreBtn = document.getElementById('restore-btn');
             if (restoreBtn) restoreBtn.disabled = false;

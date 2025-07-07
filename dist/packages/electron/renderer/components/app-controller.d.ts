@@ -34,11 +34,15 @@ declare global {
             onRestoreProgress: (callback: Function) => void;
             removeAllListeners: (channel: string) => void;
         };
+        consoleLogger?: any;
     }
 }
 export declare class AppController {
     private selectedBundlePath;
+    private consoleLogger;
     initialize(): void;
+    private initializeConsoleLogger;
+    private setupConsoleLogger;
     private setupEventListeners;
     private handleBackup;
     private handleSelectBundle;

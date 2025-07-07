@@ -2,7 +2,7 @@
 
 **A comprehensive package-backup, restore & day-to-day package-management tool for Windows**  
 
-[![Tests](https://img.shields.io/badge/tests-262%20passing-brightgreen)](./package.json)  
+[![Tests](https://img.shields.io/badge/tests-262%20passing%20(2%20skipped%20for%20safety)-brightgreen)](./package.json)  
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-blue)](./package.json)  
 [![Electron](https://img.shields.io/badge/Electron-37.2.0-47848f)](./package.json)  
 [![Version](https://img.shields.io/badge/version-1.0.0-success)](./packages/cli/software-manager.ts)
@@ -10,7 +10,25 @@
 SoftwareManager lets you **back up, restore and actively manage** your installed software across Windows package managers (Winget, Chocolatey).  
 Built 100% with **Test-Driven Development (TDD)**, it ships a CLI *and* a modern Electron GUI with comprehensive test coverage and proven stability.
 
-> **✅ Test Status**: All 262 tests passing across 19 test suites. The project maintains 90%+ test coverage with comprehensive unit, integration, and E2E testing.
+## ⚠️ CRITICAL: Test Safety Notice
+
+**BEFORE RUNNING TESTS**: This repository contains E2E tests that can perform real package operations on your system. For your safety:
+
+- **✅ Unit tests are SAFE** - They use mocks and won't affect your system
+- **⚠️ E2E tests with uninstall functionality have been DISABLED** to prevent accidental deletion of important software like Docker, Git, etc.
+
+**Quick Safety Check:**
+```bash
+# Safe to run - unit tests only
+npm test
+
+# ONLY run this if you understand the risks and have read the safety guide
+npm run test:e2e
+```
+
+The dangerous E2E uninstall tests have been skipped using `test.skip()` to prevent accidental package deletion.
+
+> **✅ Test Status**: 262 tests passing across 19 test suites (2 dangerous E2E tests safely skipped). The project maintains 90%+ test coverage with comprehensive unit, integration, and safe E2E testing.
 
 ---
 
@@ -24,7 +42,7 @@ Built 100% with **Test-Driven Development (TDD)**, it ships a CLI *and* a modern
 | **Priority Ordering** | ✔ Settings UI: **drag-and-drop priority list** of managers | — |
 | **Custom Installer Support** | ✔ **Add MSI/EXE** files from local paths and URLs<br>✔ **CLI integration** with full feature parity<br>✔ **Backup/restore integration** with automatic installation | — |
 | **Spec Editor** | ✔ Built-in **YAML/JSON editor** (Monaco) with schema validation & diff | — |
-| **Console / Log Viewer** | — | ▢ Toggleable pane streaming stdout/stderr; copy & filter |
+| **Console / Log Viewer** | ✔ **Real-time logging** with filtering and copy functionality<br>✔ **Backup/restore progress** tracking<br>✔ **Multi-level filtering** (info, warn, error, success) | — |
 | **Restore Preview** | — | ▢ **Differential report** (new / upgrade / downgrade) before restoring |
 | **Auto-Update (app)** | — | ▢ Self-update check & download |
 | **Accessibility / Theme** | — | ▢ Dark-/light-theme toggle, keyboard navigation |
@@ -37,6 +55,28 @@ Built 100% with **Test-Driven Development (TDD)**, it ships a CLI *and* a modern
 ### ✅ Comprehensive Test Suite Stabilization
 
 **Complete Test Infrastructure Overhaul** - Successfully resolved all test failures and achieved 100% test suite stability:
+
+### 🛡️ Critical Test Safety Improvements
+
+**Test Safety Hardening** - Implemented comprehensive safety measures to prevent accidental package deletion during testing:
+
+**Safety Measures Implemented:**
+- **E2E Test Isolation**: Dangerous uninstall tests in `e2e/package-uninstall.*.ts` have been disabled using `test.skip()`
+- **Unit Test Verification**: Confirmed all unit tests properly use mocks and cannot affect the real system
+- **Clear Warnings**: Added prominent warnings in README and test files about the risks of E2E tests
+
+**Issue Resolution:**
+- **Problem**: E2E tests were performing real package uninstallations, accidentally deleting Docker and Git
+- **Root Cause**: Tests launched actual Electron app and performed real UI interactions including uninstall clicks
+- **Solution**: Skipped dangerous tests while preserving safe unit tests that verify uninstall logic with mocks
+
+**Current Test Safety Status:**
+- ✅ **Unit Tests**: All safe - use proper mocks for package manager operations
+- ⚠️ **E2E Uninstall Tests**: Safely disabled to prevent accidental deletions
+- ✅ **Other E2E Tests**: Safe - don't perform destructive operations
+- 📋 **Documentation**: Complete safety guide available for developers
+
+This ensures developers can safely run the test suite without risk of deleting important software from their development machines.
 
 **Major Architectural Improvements:**
 - **Real Integration Testing**: Migrated from mocked to real Windows package manager integration (winget/chocolatey)
@@ -241,7 +281,7 @@ The GUI provides:
 | F-04 | Uninstall packages with UI                            | ✅     | `package-uninstall.spec.ts`          |
 | F-05 | Add custom MSI/EXE to bundle                          | ✅     | `msi-ingest.spec.ts`                  |
 | F-06 | YAML/JSON editor with validation                      | ✅     | `yaml-json-editor.spec.ts`            |
-| F-07 | Console/log viewer (toggle, copy, filter)             | ❌     | `console-pane.spec.ts`                |
+| F-07 | Console/log viewer (toggle, copy, filter)             | ✅     | `console.spec.ts`                     |
 | F-08 | Selective config backup (files/registry)              | ❌     | `config-picker.e2e.ts`                |
 | F-09 | Version pinning option in backup wizard               | ❌     | `backup-pin.spec.ts`                  |
 | F-10 | Differential restore preview                          | ❌     | `restore-diff.e2e.ts`                 |

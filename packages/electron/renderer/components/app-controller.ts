@@ -13,14 +13,49 @@ declare global {
             onRestoreProgress: (callback: Function) => void;
             removeAllListeners: (channel: string) => void;
         };
+        consoleLogger?: any;
     }
 }
 
+// Declare ConsoleLogger as a global class for browser usage
+declare const ConsoleLogger: any;
+
 export class AppController {
-    private selectedBundlePath: string | null = null; initialize(): void {
+    private selectedBundlePath: string | null = null;
+    private consoleLogger: any = null; initialize(): void {
         this.setupEventListeners();
         this.loadSettings();
         this.setupProgressListeners();
+        this.initializeConsoleLogger();
+    }
+
+    private initializeConsoleLogger(): void {
+        // Initialize console logger when console section is shown
+        const consoleNavItem = document.querySelector('a[onclick="showSection(\'console\')"]');
+        if (consoleNavItem) {
+            consoleNavItem.addEventListener('click', () => {
+                setTimeout(() => {
+                    this.setupConsoleLogger();
+                }, 100);
+            });
+        }
+    }
+
+    private setupConsoleLogger(): void {
+        if (!this.consoleLogger && typeof window !== 'undefined') {
+            try {
+                // Use global ConsoleLogger if available (browser version)
+                if (typeof ConsoleLogger !== 'undefined') {
+                    this.consoleLogger = new ConsoleLogger();
+                    window.consoleLogger = this.consoleLogger;
+                    console.log('Console logger initialized successfully');
+                } else {
+                    console.warn('ConsoleLogger class not found');
+                }
+            } catch (error) {
+                console.error('Failed to initialize console logger:', error);
+            }
+        }
     }
 
     private setupEventListeners(): void {
@@ -51,6 +86,11 @@ export class AppController {
             const backupBtn = document.getElementById('backup-btn') as HTMLButtonElement;
             const statusElement = document.getElementById('backup-status');
 
+            // Log to console
+            if (this.consoleLogger) {
+                this.consoleLogger.info('Starting backup operation...', 'Backup');
+            }
+
             // Disable button during backup
             if (backupBtn) backupBtn.disabled = true;
 
@@ -67,10 +107,25 @@ export class AppController {
                 statusElement.className = result.success ? 'status success' : 'status error';
             }
 
+            // Log result to console
+            if (this.consoleLogger) {
+                if (result.success) {
+                    this.consoleLogger.success('Backup operation completed successfully', 'Backup');
+                } else {
+                    this.consoleLogger.error('Backup operation failed', 'Backup');
+                }
+            }
+
             // Re-enable button
             if (backupBtn) backupBtn.disabled = false;
         } catch (error) {
             console.error('Backup failed:', error);
+
+            // Log error to console
+            if (this.consoleLogger) {
+                this.consoleLogger.error(`Backup operation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Backup');
+            }
+
             const statusElement = document.getElementById('backup-status');
             if (statusElement) {
                 statusElement.textContent = 'Backup failed';
@@ -113,6 +168,11 @@ export class AppController {
             const restoreBtn = document.getElementById('restore-btn') as HTMLButtonElement;
             const statusElement = document.getElementById('restore-status');
 
+            // Log to console
+            if (this.consoleLogger) {
+                this.consoleLogger.info(`Starting restore operation from: ${this.selectedBundlePath}`, 'Restore');
+            }
+
             // Disable button during restore
             if (restoreBtn) restoreBtn.disabled = true;
 
@@ -134,10 +194,25 @@ export class AppController {
                 }
             }
 
+            // Log result to console
+            if (this.consoleLogger) {
+                if (result.success) {
+                    this.consoleLogger.success('Restore operation completed successfully', 'Restore');
+                } else {
+                    this.consoleLogger.error('Restore operation failed', 'Restore');
+                }
+            }
+
             // Re-enable button
             if (restoreBtn) restoreBtn.disabled = false;
         } catch (error) {
             console.error('Restore failed:', error);
+
+            // Log error to console
+            if (this.consoleLogger) {
+                this.consoleLogger.error(`Restore operation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Restore');
+            }
+
             const statusElement = document.getElementById('restore-status');
             if (statusElement) {
                 statusElement.textContent = 'Restore failed';
@@ -193,12 +268,19 @@ export class AppController {
         window.electronAPI.onRestoreProgress((progress: { progress: number; message: string }) => {
             this.updateProgress('restore', progress.progress, progress.message);
         });
-    }
-
-    private updateProgress(type: 'backup' | 'restore', progress: number, message: string): void {
+    } private updateProgress(type: 'backup' | 'restore', progress: number, message: string): void {
         const progressBarElement = document.getElementById(`${type}-progress`);
         const progressFillElement = progressBarElement?.querySelector('.progress-fill') as HTMLElement;
         const statusElement = document.getElementById(`${type}-status`);
+
+        // Log progress to console
+        if (this.consoleLogger) {
+            if (type === 'backup') {
+                this.consoleLogger.logBackupProgress(progress, message);
+            } else {
+                this.consoleLogger.logRestoreProgress(progress, message);
+            }
+        }
 
         if (progressBarElement && progressFillElement && statusElement) {
             // Show progress bar
