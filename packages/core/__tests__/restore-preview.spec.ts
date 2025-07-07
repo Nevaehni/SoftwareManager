@@ -5,26 +5,18 @@ import * as sinon from 'sinon';
 
 describe('RestoreService Preview Tests', () => {
     beforeEach(() => {
-        // Clean up any existing test files
-        if (fs.existsSync('tmp/test-bundle-preview.yaml')) {
-            fs.unlinkSync('tmp/test-bundle-preview.yaml');
-        }
-        if (fs.existsSync('tmp')) {
-            fs.rmSync('tmp', { recursive: true, force: true });
+        // Ensure tmp directory exists
+        if (!fs.existsSync('tmp')) {
+            fs.mkdirSync('tmp', { recursive: true });
         }
     });
 
     afterEach(() => {
-        // Clean up after tests
-        if (fs.existsSync('tmp/test-bundle-preview.yaml')) {
-            fs.unlinkSync('tmp/test-bundle-preview.yaml');
-        }
+        // Clean up tmp directory after tests  
         if (fs.existsSync('tmp')) {
             fs.rmSync('tmp', { recursive: true, force: true });
         }
-    });
-
-    it('PreviewRestore_identifiesNewInstalls', async () => {
+    }); it('PreviewRestore_identifiesNewInstalls', async () => {
         // Test that packages not currently installed are identified as new installs
         const bundleContent = `packages:
   - id: Git.Git
@@ -34,11 +26,12 @@ describe('RestoreService Preview Tests', () => {
     name: Visual Studio Code
     version: 1.85.0`;
 
-        // Create test bundle file
+        // Create test bundle file with unique name
+        const testFile = 'tmp/test-bundle-preview-new-installs.yaml';
         if (!fs.existsSync('tmp')) {
             fs.mkdirSync('tmp', { recursive: true });
         }
-        fs.writeFileSync('tmp/test-bundle-preview.yaml', bundleContent);
+        fs.writeFileSync(testFile, bundleContent);
 
         // Mock adapter with no installed packages
         const execStub = sinon.stub().resolves({
@@ -48,10 +41,8 @@ describe('RestoreService Preview Tests', () => {
         });
 
         const wingetAdapter = new WingetAdapter(execStub);
-        wingetAdapter.listInstalled = sinon.stub().resolves([]);
-
-        const restoreService = new RestoreService(wingetAdapter);
-        const preview = await restoreService.previewRestore('tmp/test-bundle-preview.yaml');
+        wingetAdapter.listInstalled = sinon.stub().resolves([]); const restoreService = new RestoreService(wingetAdapter);
+        const preview = await restoreService.previewRestore(testFile);
 
         expect(preview.totalPackages).toBe(2);
         expect(preview.newInstalls.length).toBe(2);
@@ -68,9 +59,12 @@ describe('RestoreService Preview Tests', () => {
         expect(preview.summary.willUpgrade).toBe(0);
         expect(preview.summary.willDowngrade).toBe(0);
         expect(preview.summary.willReinstall).toBe(0);
-    });
 
-    it('PreviewRestore_identifiesUpgrades', async () => {
+        // Clean up test file
+        if (fs.existsSync(testFile)) {
+            fs.unlinkSync(testFile);
+        }
+    }); it('PreviewRestore_identifiesUpgrades', async () => {
         // Test that newer versions in bundle are identified as upgrades
         const bundleContent = `packages:
   - id: Git.Git
@@ -80,10 +74,11 @@ describe('RestoreService Preview Tests', () => {
     name: Visual Studio Code
     version: 1.90.0`;
 
+        const testFile = 'tmp/test-bundle-preview-upgrades.yaml';
         if (!fs.existsSync('tmp')) {
             fs.mkdirSync('tmp', { recursive: true });
         }
-        fs.writeFileSync('tmp/test-bundle-preview.yaml', bundleContent);
+        fs.writeFileSync(testFile, bundleContent);
 
         // Mock adapter with older installed packages
         const execStub = sinon.stub().resolves({
@@ -95,13 +90,11 @@ describe('RestoreService Preview Tests', () => {
         const installedPackages = [
             { id: 'Git.Git', name: 'Git', version: '2.42.0', source: 'winget' },
             { id: 'Microsoft.VisualStudioCode', name: 'Visual Studio Code', version: '1.85.0', source: 'winget' }
-        ];
-
-        const wingetAdapter = new WingetAdapter(execStub);
+        ]; const wingetAdapter = new WingetAdapter(execStub);
         wingetAdapter.listInstalled = sinon.stub().resolves(installedPackages);
 
         const restoreService = new RestoreService(wingetAdapter);
-        const preview = await restoreService.previewRestore('tmp/test-bundle-preview.yaml');
+        const preview = await restoreService.previewRestore(testFile);
 
         expect(preview.totalPackages).toBe(2);
         expect(preview.newInstalls.length).toBe(0);
@@ -120,9 +113,12 @@ describe('RestoreService Preview Tests', () => {
         expect(preview.upgrades[1].bundleVersion).toBe('1.90.0');
 
         expect(preview.summary.willUpgrade).toBe(2);
-    });
 
-    it('PreviewRestore_identifiesDowngrades', async () => {
+        // Clean up test file
+        if (fs.existsSync(testFile)) {
+            fs.unlinkSync(testFile);
+        }
+    }); it('PreviewRestore_identifiesDowngrades', async () => {
         // Test that older versions in bundle are identified as downgrades
         const bundleContent = `packages:
   - id: Git.Git
@@ -132,10 +128,11 @@ describe('RestoreService Preview Tests', () => {
     name: Visual Studio Code
     version: 1.80.0`;
 
+        const testFile = 'tmp/test-bundle-preview-downgrades.yaml';
         if (!fs.existsSync('tmp')) {
             fs.mkdirSync('tmp', { recursive: true });
         }
-        fs.writeFileSync('tmp/test-bundle-preview.yaml', bundleContent);
+        fs.writeFileSync(testFile, bundleContent);
 
         // Mock adapter with newer installed packages
         const execStub = sinon.stub().resolves({
@@ -150,10 +147,8 @@ describe('RestoreService Preview Tests', () => {
         ];
 
         const wingetAdapter = new WingetAdapter(execStub);
-        wingetAdapter.listInstalled = sinon.stub().resolves(installedPackages);
-
-        const restoreService = new RestoreService(wingetAdapter);
-        const preview = await restoreService.previewRestore('tmp/test-bundle-preview.yaml');
+        wingetAdapter.listInstalled = sinon.stub().resolves(installedPackages); const restoreService = new RestoreService(wingetAdapter);
+        const preview = await restoreService.previewRestore(testFile);
 
         expect(preview.totalPackages).toBe(2);
         expect(preview.newInstalls.length).toBe(0);
@@ -167,9 +162,12 @@ describe('RestoreService Preview Tests', () => {
         expect(preview.downgrades[0].bundleVersion).toBe('2.40.0');
 
         expect(preview.summary.willDowngrade).toBe(2);
-    });
 
-    it('PreviewRestore_identifiesReinstalls', async () => {
+        // Clean up test file
+        if (fs.existsSync(testFile)) {
+            fs.unlinkSync(testFile);
+        }
+    }); it('PreviewRestore_identifiesReinstalls', async () => {
         // Test that same versions are identified as reinstalls
         const bundleContent = `packages:
   - id: Git.Git
@@ -179,10 +177,11 @@ describe('RestoreService Preview Tests', () => {
     name: Visual Studio Code
     version: 1.85.0`;
 
+        const testFile = 'tmp/test-bundle-preview-reinstalls.yaml';
         if (!fs.existsSync('tmp')) {
             fs.mkdirSync('tmp', { recursive: true });
         }
-        fs.writeFileSync('tmp/test-bundle-preview.yaml', bundleContent);
+        fs.writeFileSync(testFile, bundleContent);
 
         // Mock adapter with same versions installed
         const execStub = sinon.stub().resolves({
@@ -197,10 +196,8 @@ describe('RestoreService Preview Tests', () => {
         ];
 
         const wingetAdapter = new WingetAdapter(execStub);
-        wingetAdapter.listInstalled = sinon.stub().resolves(installedPackages);
-
-        const restoreService = new RestoreService(wingetAdapter);
-        const preview = await restoreService.previewRestore('tmp/test-bundle-preview.yaml');
+        wingetAdapter.listInstalled = sinon.stub().resolves(installedPackages); const restoreService = new RestoreService(wingetAdapter);
+        const preview = await restoreService.previewRestore(testFile);
 
         expect(preview.totalPackages).toBe(2);
         expect(preview.newInstalls.length).toBe(0);
@@ -214,9 +211,12 @@ describe('RestoreService Preview Tests', () => {
         expect(preview.reinstalls[0].bundleVersion).toBe('2.42.0');
 
         expect(preview.summary.willReinstall).toBe(2);
-    });
 
-    it('PreviewRestore_mixedScenario', async () => {
+        // Clean up test file
+        if (fs.existsSync(testFile)) {
+            fs.unlinkSync(testFile);
+        }
+    }); it('PreviewRestore_mixedScenario', async () => {
         // Test a complex scenario with various types of changes
         const bundleContent = `packages:
   - id: Git.Git
@@ -232,10 +232,11 @@ describe('RestoreService Preview Tests', () => {
     name: Notepad++
     version: 8.5.0`;
 
+        const testFile = 'tmp/test-bundle-preview-mixed.yaml';
         if (!fs.existsSync('tmp')) {
             fs.mkdirSync('tmp', { recursive: true });
         }
-        fs.writeFileSync('tmp/test-bundle-preview.yaml', bundleContent);
+        fs.writeFileSync(testFile, bundleContent);
 
         // Mock adapter with mixed installed packages
         const execStub = sinon.stub().resolves({
@@ -252,10 +253,8 @@ describe('RestoreService Preview Tests', () => {
         ];
 
         const wingetAdapter = new WingetAdapter(execStub);
-        wingetAdapter.listInstalled = sinon.stub().resolves(installedPackages);
-
-        const restoreService = new RestoreService(wingetAdapter);
-        const preview = await restoreService.previewRestore('tmp/test-bundle-preview.yaml');
+        wingetAdapter.listInstalled = sinon.stub().resolves(installedPackages); const restoreService = new RestoreService(wingetAdapter);
+        const preview = await restoreService.previewRestore(testFile);
 
         expect(preview.totalPackages).toBe(4);
         expect(preview.newInstalls.length).toBe(1);
@@ -291,16 +290,20 @@ describe('RestoreService Preview Tests', () => {
         expect(preview.summary.willDowngrade).toBe(1);
         expect(preview.summary.willReinstall).toBe(1);
         expect(preview.summary.willSkip).toBe(0);
-    });
 
-    it('PreviewRestore_handlesEmptyBundle', async () => {
+        // Clean up test file
+        if (fs.existsSync(testFile)) {
+            fs.unlinkSync(testFile);
+        }
+    }); it('PreviewRestore_handlesEmptyBundle', async () => {
         // Test handling of empty bundle
         const bundleContent = 'packages: []';
 
+        const testFile = 'tmp/test-bundle-preview-empty.yaml';
         if (!fs.existsSync('tmp')) {
             fs.mkdirSync('tmp', { recursive: true });
         }
-        fs.writeFileSync('tmp/test-bundle-preview.yaml', bundleContent);
+        fs.writeFileSync(testFile, bundleContent);
 
         const execStub = sinon.stub().resolves({
             stdout: '',
@@ -309,10 +312,8 @@ describe('RestoreService Preview Tests', () => {
         });
 
         const wingetAdapter = new WingetAdapter(execStub);
-        wingetAdapter.listInstalled = sinon.stub().resolves([]);
-
-        const restoreService = new RestoreService(wingetAdapter);
-        const preview = await restoreService.previewRestore('tmp/test-bundle-preview.yaml');
+        wingetAdapter.listInstalled = sinon.stub().resolves([]); const restoreService = new RestoreService(wingetAdapter);
+        const preview = await restoreService.previewRestore(testFile);
 
         expect(preview.totalPackages).toBe(0);
         expect(preview.newInstalls.length).toBe(0);
@@ -326,19 +327,23 @@ describe('RestoreService Preview Tests', () => {
         expect(preview.summary.willDowngrade).toBe(0);
         expect(preview.summary.willReinstall).toBe(0);
         expect(preview.summary.willSkip).toBe(0);
-    });
 
-    it('PreviewRestore_handlesListInstalledError', async () => {
+        // Clean up test file
+        if (fs.existsSync(testFile)) {
+            fs.unlinkSync(testFile);
+        }
+    }); it('PreviewRestore_handlesListInstalledError', async () => {
         // Test that preview gracefully handles errors when listing installed packages
         const bundleContent = `packages:
   - id: Git.Git
     name: Git
     version: 2.42.0`;
 
+        const testFile = 'tmp/test-bundle-preview-error.yaml';
         if (!fs.existsSync('tmp')) {
             fs.mkdirSync('tmp', { recursive: true });
         }
-        fs.writeFileSync('tmp/test-bundle-preview.yaml', bundleContent);
+        fs.writeFileSync(testFile, bundleContent);
 
         const execStub = sinon.stub().resolves({
             stdout: '',
@@ -347,10 +352,8 @@ describe('RestoreService Preview Tests', () => {
         });
 
         const wingetAdapter = new WingetAdapter(execStub);
-        wingetAdapter.listInstalled = sinon.stub().rejects(new Error('Failed to list packages'));
-
-        const restoreService = new RestoreService(wingetAdapter);
-        const preview = await restoreService.previewRestore('tmp/test-bundle-preview.yaml');
+        wingetAdapter.listInstalled = sinon.stub().rejects(new Error('Failed to list packages')); const restoreService = new RestoreService(wingetAdapter);
+        const preview = await restoreService.previewRestore(testFile);
 
         // Should treat all packages as new installs when listing fails
         expect(preview.totalPackages).toBe(1);
@@ -358,19 +361,23 @@ describe('RestoreService Preview Tests', () => {
         expect(preview.newInstalls[0].id).toBe('Git.Git');
         expect(preview.newInstalls[0].action).toBe('install');
         expect(preview.summary.willInstall).toBe(1);
-    });
 
-    it('PreviewRestore_reportsProgress', async () => {
+        // Clean up test file
+        if (fs.existsSync(testFile)) {
+            fs.unlinkSync(testFile);
+        }
+    }); it('PreviewRestore_reportsProgress', async () => {
         // Test that preview reports progress through callback
         const bundleContent = `packages:
   - id: Git.Git
     name: Git
     version: 2.42.0`;
 
+        const testFile = 'tmp/test-bundle-preview-progress.yaml';
         if (!fs.existsSync('tmp')) {
             fs.mkdirSync('tmp', { recursive: true });
         }
-        fs.writeFileSync('tmp/test-bundle-preview.yaml', bundleContent);
+        fs.writeFileSync(testFile, bundleContent);
 
         const execStub = sinon.stub().resolves({
             stdout: '',
@@ -386,7 +393,7 @@ describe('RestoreService Preview Tests', () => {
         const progressCallback = sinon.spy();
         restoreService.setProgressCallback(progressCallback);
 
-        await restoreService.previewRestore('tmp/test-bundle-preview.yaml');
+        await restoreService.previewRestore(testFile);
 
         // Verify progress callback was called
         expect(progressCallback.callCount).toBeGreaterThan(0);
@@ -397,5 +404,10 @@ describe('RestoreService Preview Tests', () => {
         expect(calls.some(call => call.args[1].includes('Getting currently installed packages'))).toBe(true);
         expect(calls.some(call => call.args[1].includes('Analyzing package differences'))).toBe(true);
         expect(calls.some(call => call.args[1].includes('Preview analysis complete'))).toBe(true);
+
+        // Clean up the test file
+        if (fs.existsSync(testFile)) {
+            fs.unlinkSync(testFile);
+        }
     });
 });

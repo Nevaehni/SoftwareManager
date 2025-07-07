@@ -1,5 +1,6 @@
 import { PackageAdapter, PackageInfo } from '../../core/src/package-adapter';
 import * as fs from 'fs';
+import * as path from 'path';
 import { spawn } from 'child_process';
 import { promisify } from 'util';
 
@@ -68,15 +69,19 @@ export class WingetAdapter implements PackageAdapter {
 
             if (result.exitCode === 0) {
                 // Parse the table output to get packages
-                const packages = this.parseWingetSearchOutput(result.stdout);
-
-                // Convert to YAML-like format
+                const packages = this.parseWingetSearchOutput(result.stdout);                // Convert to YAML-like format
                 let content = 'packages:\n';
                 packages.forEach(pkg => {
                     content += `  - id: ${pkg.id}\n`;
                     content += `    name: ${pkg.name}\n`;
                     content += `    version: ${pkg.version}\n`;
                 });
+
+                // Ensure the directory exists before writing the file
+                const dir = path.dirname(filename);
+                if (!fs.existsSync(dir)) {
+                    fs.mkdirSync(dir, { recursive: true });
+                }
 
                 fs.writeFileSync(filename, content);
                 return;

@@ -10,7 +10,7 @@ describe('Integration Tests - Bundle Creation', () => {
             fs.unlinkSync('tmp/spec.yaml');
         }
         if (fs.existsSync('tmp')) {
-            fs.rmdirSync('tmp');
+            fs.rmSync('tmp', { recursive: true, force: true });
         }
     });
 
@@ -21,19 +21,7 @@ describe('Integration Tests - Bundle Creation', () => {
         }
         // Clean up any other files in tmp directory
         if (fs.existsSync('tmp')) {
-            try {
-                const files = fs.readdirSync('tmp');
-                files.forEach(file => {
-                    const filePath = path.join('tmp', file);
-                    if (fs.statSync(filePath).isFile()) {
-                        fs.unlinkSync(filePath);
-                    }
-                });
-                fs.rmdirSync('tmp');
-            } catch (e) {
-                // Directory not empty or other error, ignore
-                console.warn('Could not clean up tmp directory:', e);
-            }
+            fs.rmSync('tmp', { recursive: true, force: true });
         }
     });
 
