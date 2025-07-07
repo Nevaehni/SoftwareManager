@@ -114,38 +114,9 @@ software-manager remove-installer "My Custom App"
 
 This enables complete automation scenarios where users can script their entire software setup including both package managers and custom applications. The CLI maintains the same security and validation standards as the GUI while providing scriptable, CI/CD-friendly interfaces.
 
-> **TDD rule:**  
-> _No user-facing feature in the "Missing" column may be implemented without first committing a failing test (unit, contract, integration or E2E as appropriate)._
-
 ---
 
 ## 🚀 Quick Start
-
-### Prerequisites
-
-- **Windows 10/11** (primary platform)
-- **Node.js 18+** and **pnpm** package manager
-- **Winget** and/or **Chocolatey** installed (optional but recommended)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/SoftwareManager.git
-   cd SoftwareManager
-   ```
-
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
-
-3. **Build the project**
-   ```bash
-   pnpm build
-   ```
-
----
 
 ### Prerequisites
 
