@@ -88,12 +88,21 @@ class SoftwareManagerCLI {
     }
     async createExecFunction() {
         return async (command, args) => {
-            const result = await execAsync(`${command} ${args.join(' ')}`);
-            return {
-                stdout: result.stdout,
-                stderr: result.stderr,
-                exitCode: 0
-            };
+            try {
+                const result = await execAsync(`${command} ${args.join(' ')}`);
+                return {
+                    stdout: result.stdout || '',
+                    stderr: result.stderr || '',
+                    exitCode: 0
+                };
+            }
+            catch (error) {
+                return {
+                    stdout: '',
+                    stderr: error.message || 'Command failed',
+                    exitCode: error.code || 1
+                };
+            }
         };
     }
     async backup(outputPath = 'software-backup.yaml') {

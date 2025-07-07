@@ -35,16 +35,50 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WingetAdapter = void 0;
 const fs = __importStar(require("fs"));
+const child_process_1 = require("child_process");
+// Default exec function that uses real child_process
+const defaultExecFunction = (command, args) => {
+    return new Promise((resolve) => {
+        const child = (0, child_process_1.spawn)(command, args, {
+            stdio: ['ignore', 'pipe', 'pipe'],
+            shell: true
+        });
+        let stdout = '';
+        let stderr = '';
+        child.stdout?.on('data', (data) => {
+            stdout += data.toString();
+        });
+        child.stderr?.on('data', (data) => {
+            stderr += data.toString();
+        });
+        child.on('close', (code) => {
+            resolve({
+                stdout,
+                stderr,
+                exitCode: code || 0
+            });
+        });
+        child.on('error', (error) => {
+            resolve({
+                stdout,
+                stderr: error.message,
+                exitCode: 1
+            });
+        });
+    });
+};
 class WingetAdapter {
     constructor(execFunction) {
-        this.execFunction = execFunction;
+        this.execFunction = execFunction || defaultExecFunction;
     }
     async exportList(filename) {
-        // Enhanced implementation that actually uses the search functionality
-        if (this.execFunction) {
-            try {
-                // Search for common packages to export
-                const packages = await this.search('');
+        this.validateExecFunction();
+        try {
+            // Call winget list to get installed packages
+            const result = await this.execFunction('winget', ['list', '--accept-source-agreements']);
+            if (result.exitCode === 0) {
+                // Parse the table output to get packages
+                const packages = this.parseWingetSearchOutput(result.stdout);
                 // Convert to YAML-like format
                 let content = 'packages:\n';
                 packages.forEach(pkg => {
@@ -55,19 +89,12 @@ class WingetAdapter {
                 fs.writeFileSync(filename, content);
                 return;
             }
-            catch (error) {
-                // Fall back to static content if search fails
-            }
         }
-        // Fallback implementation for when no exec function is provided
-        const samplePackageData = `packages:
-  - id: Git.Git
-    name: Git
-    version: 2.42.0
-  - id: Microsoft.VisualStudioCode
-    name: Visual Studio Code
-    version: 1.85.0`;
-        fs.writeFileSync(filename, samplePackageData);
+        catch (error) {
+            console.error('Failed to export package list:', error);
+            throw new Error(`Failed to export package list: ${error}`);
+        }
+        throw new Error('Failed to export package list - winget command failed');
     }
     async search(query) {
         this.validateExecFunction(); // Remove --source restriction to search all sources
@@ -182,9 +209,7 @@ class WingetAdapter {
         }
     }
     validateExecFunction() {
-        if (!this.execFunction) {
-            throw new Error('Exec function not provided');
-        }
+        // No validation needed since execFunction is always set in constructor
     }
 }
 exports.WingetAdapter = WingetAdapter;

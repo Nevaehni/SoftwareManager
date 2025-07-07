@@ -67,16 +67,22 @@ class SoftwareManagerCLI {
         } catch (error) {
             console.warn('Failed to save custom installers config:', error);
         }
-    }
-
-    async createExecFunction() {
+    } async createExecFunction() {
         return async (command: string, args: string[]) => {
-            const result = await execAsync(`${command} ${args.join(' ')}`);
-            return {
-                stdout: result.stdout,
-                stderr: result.stderr,
-                exitCode: 0
-            };
+            try {
+                const result = await execAsync(`${command} ${args.join(' ')}`);
+                return {
+                    stdout: result.stdout || '',
+                    stderr: result.stderr || '',
+                    exitCode: 0
+                };
+            } catch (error: any) {
+                return {
+                    stdout: '',
+                    stderr: error.message || 'Command failed',
+                    exitCode: error.code || 1
+                };
+            }
         };
     } async backup(outputPath: string = 'software-backup.yaml'): Promise<void> {
         console.log('🔄 Starting backup...');

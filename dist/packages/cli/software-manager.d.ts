@@ -15,8 +15,8 @@ declare class SoftwareManagerCLI {
     private saveCustomInstallers;
     createExecFunction(): Promise<(command: string, args: string[]) => Promise<{
         stdout: string;
-        stderr: string;
-        exitCode: number;
+        stderr: any;
+        exitCode: any;
     }>>;
     backup(outputPath?: string): Promise<void>;
     restore(bundlePath: string): Promise<void>;

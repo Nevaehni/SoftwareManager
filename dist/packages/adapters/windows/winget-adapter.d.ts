@@ -6,7 +6,7 @@ interface ExecResult {
 }
 type ExecFunction = (command: string, args: string[]) => Promise<ExecResult>;
 export declare class WingetAdapter implements PackageAdapter {
-    private execFunction?;
+    private execFunction;
     constructor(execFunction?: ExecFunction);
     exportList(filename: string): Promise<void>;
     search(query: string): Promise<PackageInfo[]>;

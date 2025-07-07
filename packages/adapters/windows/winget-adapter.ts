@@ -1,5 +1,7 @@
 import { PackageAdapter, PackageInfo } from '../../core/src/package-adapter';
 import * as fs from 'fs';
+import { spawn } from 'child_process';
+import { promisify } from 'util';
 
 interface WingetPackage {
     Id: string;
@@ -15,17 +17,58 @@ interface ExecResult {
 
 type ExecFunction = (command: string, args: string[]) => Promise<ExecResult>;
 
+// Default exec function that uses real child_process
+const defaultExecFunction: ExecFunction = (command: string, args: string[]): Promise<ExecResult> => {
+    return new Promise((resolve) => {
+        const child = spawn(command, args, {
+            stdio: ['ignore', 'pipe', 'pipe'],
+            shell: true
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout?.on('data', (data) => {
+            stdout += data.toString();
+        });
+
+        child.stderr?.on('data', (data) => {
+            stderr += data.toString();
+        });
+
+        child.on('close', (code) => {
+            resolve({
+                stdout,
+                stderr,
+                exitCode: code || 0
+            });
+        });
+
+        child.on('error', (error) => {
+            resolve({
+                stdout,
+                stderr: error.message,
+                exitCode: 1
+            });
+        });
+    });
+};
+
 export class WingetAdapter implements PackageAdapter {
-    private execFunction?: ExecFunction;
+    private execFunction: ExecFunction;
 
     constructor(execFunction?: ExecFunction) {
-        this.execFunction = execFunction;
+        this.execFunction = execFunction || defaultExecFunction;
     } async exportList(filename: string): Promise<void> {
-        // Enhanced implementation that actually uses the search functionality
-        if (this.execFunction) {
-            try {
-                // Search for common packages to export
-                const packages = await this.search('');
+        this.validateExecFunction();
+
+        try {
+            // Call winget list to get installed packages
+            const result = await this.execFunction('winget', ['list', '--accept-source-agreements']);
+
+            if (result.exitCode === 0) {
+                // Parse the table output to get packages
+                const packages = this.parseWingetSearchOutput(result.stdout);
 
                 // Convert to YAML-like format
                 let content = 'packages:\n';
@@ -37,21 +80,13 @@ export class WingetAdapter implements PackageAdapter {
 
                 fs.writeFileSync(filename, content);
                 return;
-            } catch (error) {
-                // Fall back to static content if search fails
             }
+        } catch (error) {
+            console.error('Failed to export package list:', error);
+            throw new Error(`Failed to export package list: ${error}`);
         }
 
-        // Fallback implementation for when no exec function is provided
-        const samplePackageData = `packages:
-  - id: Git.Git
-    name: Git
-    version: 2.42.0
-  - id: Microsoft.VisualStudioCode
-    name: Visual Studio Code
-    version: 1.85.0`;
-
-        fs.writeFileSync(filename, samplePackageData);
+        throw new Error('Failed to export package list - winget command failed');
     } async search(query: string): Promise<PackageInfo[]> {
         this.validateExecFunction();        // Remove --source restriction to search all sources
         const result = await this.execFunction!('winget', ['search', query, '--accept-source-agreements']);
@@ -179,11 +214,7 @@ export class WingetAdapter implements PackageAdapter {
             console.error('Failed to parse winget list output:', error);
             throw new Error(`Failed to parse winget list output: ${error}`);
         }
-    }
-
-    private validateExecFunction(): void {
-        if (!this.execFunction) {
-            throw new Error('Exec function not provided');
-        }
+    } private validateExecFunction(): void {
+        // No validation needed since execFunction is always set in constructor
     }
 }
