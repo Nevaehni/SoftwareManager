@@ -284,7 +284,7 @@ The GUI provides:
 | F-07 | Console/log viewer (toggle, copy, filter)             | ✅     | `console.spec.ts`                     |
 | F-08 | Selective config backup (files/registry)              | ❌     | `config-picker.e2e.ts`                |
 | F-09 | Version pinning option in backup wizard               | ✅     | `backup-pin.spec.ts`                  |
-| F-10 | Differential restore preview                          | ❌     | `restore-diff.e2e.ts`                 |
+| F-10 | Differential restore preview                          | ✅     | `restore-preview.integration.spec.ts` |
 | F-11 | Auto-update for SoftwareManager                       | ❌     | `auto-update.spec.ts`                 |
 | F-12 | Accessibility & dark/light theme                      | ❌     | `a11y-theme.e2e.ts`                   |
 

@@ -82,12 +82,46 @@ export class AppController {
         const previewBtn = document.getElementById('preview-restore-btn');
         if (previewBtn) {
             previewBtn.addEventListener('click', () => this.handlePreviewRestore());
-        }
-
-        // Settings functionality
+        }        // Settings functionality
         const saveSettingsBtn = document.getElementById('save-settings-btn');
         if (saveSettingsBtn) {
             saveSettingsBtn.addEventListener('click', () => this.handleSaveSettings());
+        }
+
+        // Config picker functionality
+        const addConfigPathBtn = document.getElementById('add-config-path-btn');
+        if (addConfigPathBtn) {
+            addConfigPathBtn.addEventListener('click', () => this.handleAddConfigPath());
+        }
+
+        const confirmConfigPathBtn = document.getElementById('confirm-config-path-btn');
+        if (confirmConfigPathBtn) {
+            confirmConfigPathBtn.addEventListener('click', () => this.handleConfirmConfigPath());
+        }
+
+        const cancelConfigPathBtn = document.getElementById('cancel-config-path-btn');
+        if (cancelConfigPathBtn) {
+            cancelConfigPathBtn.addEventListener('click', () => this.handleCancelConfigPath());
+        }
+
+        const previewConfigBackupBtn = document.getElementById('preview-config-backup-btn');
+        if (previewConfigBackupBtn) {
+            previewConfigBackupBtn.addEventListener('click', () => this.handlePreviewConfigBackup());
+        }
+
+        const closeConfigPreviewBtn = document.getElementById('close-config-preview-btn');
+        if (closeConfigPreviewBtn) {
+            closeConfigPreviewBtn.addEventListener('click', () => this.handleCloseConfigPreview());
+        }
+
+        const closePreviewBtn = document.getElementById('close-preview-btn');
+        if (closePreviewBtn) {
+            closePreviewBtn.addEventListener('click', () => this.handleCloseConfigPreview());
+        }
+
+        const addRegistryKeyBtn = document.getElementById('add-registry-key-btn');
+        if (addRegistryKeyBtn) {
+            addRegistryKeyBtn.addEventListener('click', () => this.handleAddRegistryKey());
         }
     } private async handleBackup(): Promise<void> {
         try {
@@ -657,13 +691,282 @@ export class AppController {
         if (this.consoleLogger) {
             this.consoleLogger.info('Cleared all version pins', 'Version Pinning');
         }
-    }
-
-    private updatePinnedCount(): void {
+    } private updatePinnedCount(): void {
         const countElement = document.getElementById('pinned-count');
         if (countElement) {
             const count = Object.keys(this.versionPins).length;
             countElement.textContent = `${count} package${count !== 1 ? 's' : ''} pinned`;
+        }
+    }
+
+    // Config picker functionality
+    private configPaths: string[] = [];
+    private registryKeys: string[] = [];
+
+    private handleAddConfigPath(): void {
+        const modal = document.getElementById('config-path-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            const input = document.getElementById('config-path-input') as HTMLInputElement;
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        }
+    }
+
+    private handleConfirmConfigPath(): void {
+        const input = document.getElementById('config-path-input') as HTMLInputElement;
+        const errorElement = document.getElementById('config-path-error');
+
+        if (!input) return;
+
+        const path = input.value.trim();
+        if (!path) {
+            this.showConfigError('Please enter a path');
+            return;
+        }
+
+        // Basic path validation (would need proper file system validation in real app)
+        if (!this.validateConfigPath(path)) {
+            this.showConfigError('Path does not exist or is invalid');
+            return;
+        }
+
+        // Add to config paths if not already present
+        if (!this.configPaths.includes(path)) {
+            this.configPaths.push(path);
+            this.updateConfigPathsList();
+
+            if (this.consoleLogger) {
+                this.consoleLogger.info(`Added config path: ${path}`, 'Config Backup');
+            }
+        }
+
+        // Hide modal and clear error
+        this.handleCancelConfigPath();
+        if (errorElement) {
+            errorElement.classList.add('hidden');
+        }
+    }
+
+    private handleCancelConfigPath(): void {
+        const modal = document.getElementById('config-path-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    private validateConfigPath(path: string): boolean {
+        // Basic validation - in a real app, this would check if the path exists
+        // For now, just check format
+        return path.length > 0 && (path.includes('\\') || path.includes('/'));
+    }
+
+    private showConfigError(message: string): void {
+        const errorElement = document.getElementById('config-path-error');
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+    }
+
+    private updateConfigPathsList(): void {
+        const listElement = document.getElementById('config-paths-list');
+        const emptyElement = document.getElementById('config-paths-empty');
+
+        if (!listElement || !emptyElement) return;
+
+        if (this.configPaths.length === 0) {
+            emptyElement.style.display = 'block';
+            listElement.innerHTML = '';
+        } else {
+            emptyElement.style.display = 'none';
+            listElement.innerHTML = this.configPaths.map((path, index) => `
+                <div class="config-path-item flex items-center justify-between p-2 bg-white rounded border">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        <span class="text-sm font-mono">${path}</span>
+                    </div>
+                    <button class="remove-btn text-red-600 hover:text-red-800 p-1" onclick="appController.removeConfigPath(${index})">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+    }
+
+    public removeConfigPath(index: number): void {
+        if (index >= 0 && index < this.configPaths.length) {
+            const removedPath = this.configPaths[index];
+            this.configPaths.splice(index, 1);
+            this.updateConfigPathsList();
+
+            if (this.consoleLogger) {
+                this.consoleLogger.info(`Removed config path: ${removedPath}`, 'Config Backup');
+            }
+        }
+    }
+
+    private handleAddRegistryKey(): void {
+        const input = document.getElementById('registry-key-input') as HTMLInputElement;
+        const errorElement = document.getElementById('registry-key-error');
+
+        if (!input) return;
+
+        const key = input.value.trim();
+        if (!key) {
+            this.showRegistryError('Please enter a registry key');
+            return;
+        }
+
+        // Validate registry key format
+        if (!this.validateRegistryKey(key)) {
+            this.showRegistryError('Invalid registry key format. Use HKEY_* format.');
+            return;
+        }
+
+        // Add to registry keys if not already present
+        if (!this.registryKeys.includes(key)) {
+            this.registryKeys.push(key);
+            this.updateRegistryKeysList();
+            input.value = '';
+
+            if (this.consoleLogger) {
+                this.consoleLogger.info(`Added registry key: ${key}`, 'Config Backup');
+            }
+        }
+
+        // Clear error
+        if (errorElement) {
+            errorElement.classList.add('hidden');
+        }
+    }
+
+    private validateRegistryKey(key: string): boolean {
+        // Basic registry key validation
+        const validRoots = ['HKEY_CLASSES_ROOT', 'HKEY_CURRENT_USER', 'HKEY_LOCAL_MACHINE', 'HKEY_USERS', 'HKEY_CURRENT_CONFIG'];
+        return validRoots.some(root => key.startsWith(root + '\\'));
+    }
+
+    private showRegistryError(message: string): void {
+        const errorElement = document.getElementById('registry-key-error');
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+    }
+
+    private updateRegistryKeysList(): void {
+        const listElement = document.getElementById('registry-keys-list');
+        if (!listElement) return;
+
+        listElement.innerHTML = this.registryKeys.map((key, index) => `
+            <div class="flex items-center justify-between p-1 bg-gray-100 rounded text-sm">
+                <span class="font-mono">${key}</span>
+                <button class="text-red-600 hover:text-red-800 p-1" onclick="appController.removeRegistryKey(${index})">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    public removeRegistryKey(index: number): void {
+        if (index >= 0 && index < this.registryKeys.length) {
+            const removedKey = this.registryKeys[index];
+            this.registryKeys.splice(index, 1);
+            this.updateRegistryKeysList();
+
+            if (this.consoleLogger) {
+                this.consoleLogger.info(`Removed registry key: ${removedKey}`, 'Config Backup');
+            }
+        }
+    }
+
+    private handlePreviewConfigBackup(): void {
+        const modal = document.getElementById('config-backup-preview');
+        const contentElement = document.getElementById('config-preview-content');
+        const sizeElement = document.getElementById('backup-size-estimate');
+
+        if (!modal || !contentElement) return;
+
+        // Generate preview content
+        let previewHtml = '<div class="space-y-4">';
+
+        if (this.configPaths.length > 0) {
+            previewHtml += `
+                <div>
+                    <h4 class="font-medium text-gray-900 mb-2">Configuration Files & Folders (${this.configPaths.length})</h4>
+                    <div class="bg-gray-50 rounded p-3 max-h-48 overflow-y-auto">
+                        ${this.configPaths.map(path => `
+                            <div class="flex items-center space-x-2 mb-1">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z"></path>
+                                </svg>
+                                <span class="text-sm font-mono">${path}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        if (this.registryKeys.length > 0) {
+            previewHtml += `
+                <div>
+                    <h4 class="font-medium text-gray-900 mb-2">Registry Keys (${this.registryKeys.length})</h4>
+                    <div class="bg-gray-50 rounded p-3 max-h-48 overflow-y-auto">
+                        ${this.registryKeys.map(key => `
+                            <div class="flex items-center space-x-2 mb-1">
+                                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <span class="text-sm font-mono">${key}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        if (this.configPaths.length === 0 && this.registryKeys.length === 0) {
+            previewHtml += `
+                <div class="text-center py-8 text-gray-500">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z"></path>
+                    </svg>
+                    <p>No configuration items selected</p>
+                    <p class="text-sm">Add files, folders, or registry keys to preview backup contents</p>
+                </div>
+            `;
+        }
+
+        previewHtml += '</div>';
+        contentElement.innerHTML = previewHtml;
+
+        // Show estimated size
+        if (sizeElement) {
+            const totalItems = this.configPaths.length + this.registryKeys.length;
+            sizeElement.textContent = `Estimated backup size: ~${Math.max(1, totalItems * 2)}KB (${totalItems} items)`;
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    private handleCloseConfigPreview(): void {
+        const modal = document.getElementById('config-backup-preview');
+        if (modal) {
+            modal.classList.add('hidden');
         }
     }
 

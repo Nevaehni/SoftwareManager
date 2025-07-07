@@ -21,5 +21,21 @@ export declare class AppController {
     private createPackageItem;
     private handleClearPins;
     private updatePinnedCount;
+    private configPaths;
+    private registryKeys;
+    private handleAddConfigPath;
+    private handleConfirmConfigPath;
+    private handleCancelConfigPath;
+    private validateConfigPath;
+    private showConfigError;
+    private updateConfigPathsList;
+    removeConfigPath(index: number): void;
+    private handleAddRegistryKey;
+    private validateRegistryKey;
+    private showRegistryError;
+    private updateRegistryKeysList;
+    removeRegistryKey(index: number): void;
+    private handlePreviewConfigBackup;
+    private handleCloseConfigPreview;
 }
 //# sourceMappingURL=app-controller.d.ts.map
