@@ -8,6 +8,7 @@ class AppController {
         this.setupProgressListeners();
         this.setupDragAndDrop(); this.setupDragAndDrop(); this.initializePackageSearch();
         this.setupPackageTabs();
+        this.initializeEditor();
     } initializePackageSearch() {
         // Function to initialize the package search UI
         const initSearchUI = () => {
@@ -815,6 +816,45 @@ class AppController {
                 statusElement.classList.add('hidden');
             }, 3000);
         }
+    }
+
+    initializeEditor() {
+        // Function to initialize the spec editor
+        const initEditor = () => {
+            if (!window.specEditor) {
+                try {
+                    // SpecEditor will be loaded from separate file
+                    if (typeof SpecEditor !== 'undefined') {
+                        window.specEditor = new SpecEditor();
+                        window.specEditor.initialize();
+                        console.log('Spec editor initialized');
+                    } else {
+                        console.warn('SpecEditor class not found, will initialize when user opens editor');
+                    }
+                } catch (error) {
+                    console.error('Failed to initialize spec editor:', error);
+                }
+            }
+        };
+
+        // Initialize when editor section is shown
+        const editorNavItem = document.querySelector('a[onclick="showSection(\'editor\')"]');
+        if (editorNavItem) {
+            editorNavItem.addEventListener('click', () => {
+                // Delay initialization to ensure DOM is ready
+                setTimeout(() => {
+                    initEditor();
+                }, 100);
+            });
+        }
+
+        // Initialize immediately if editor section is visible
+        setTimeout(() => {
+            const editorSection = document.getElementById('editor-section');
+            if (editorSection && !editorSection.classList.contains('hidden')) {
+                initEditor();
+            }
+        }, 200);
     }
 }
 

@@ -10,11 +10,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     selectFile: (options: any) => ipcRenderer.invoke('select-file', options),
     selectDirectory: () => ipcRenderer.invoke('select-directory'),
     selectCustomInstaller: () => ipcRenderer.invoke('select-custom-installer'),
-    downloadCustomInstaller: (url: string) => ipcRenderer.invoke('download-custom-installer', url),// Package management
+    downloadCustomInstaller: (url: string) => ipcRenderer.invoke('download-custom-installer', url),    // Package management
     searchPackages: (query: string) => ipcRenderer.invoke('search-packages', query),
     installPackage: (packageId: string, source: string, version?: string) => ipcRenderer.invoke('install-package', packageId, source, version),
     uninstallPackage: (packageId: string, source: string) => ipcRenderer.invoke('uninstall-package', packageId, source),
     listInstalledPackages: () => ipcRenderer.invoke('list-installed-packages'),
+
+    // Editor functionality
+    loadSpecFile: () => ipcRenderer.invoke('load-spec-file'),
+    saveSpecFile: (content: string, language: string) => ipcRenderer.invoke('save-spec-file', content, language),
+    validateSpec: (content: string, language: string) => ipcRenderer.invoke('validate-spec', content, language),
 
     // Window controls
     minimizeWindow: () => ipcRenderer.invoke('minimize-window'),

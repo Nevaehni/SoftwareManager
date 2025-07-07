@@ -24,7 +24,7 @@
 		"test:e2e": "playwright test",
 		"test:all": "npm run test:unit && npm run test:integration && npm run test:contract",
 		"build": "tsc && npm run copy-renderer",
-		"copy-renderer": "copy packages\\electron\\renderer\\*.js dist\\packages\\electron\\renderer\\ && copy packages\\electron\\renderer\\*.html dist\\packages\\electron\\renderer\\",
+		"copy-renderer": "copy packages\\electron\\renderer\\*.js dist\\packages\\electron\\renderer\\ && copy packages\\electron\\renderer\\*.html dist\\packages\\electron\\renderer\\ && xcopy packages\\electron\\renderer\\components dist\\packages\\electron\\renderer\\components /E /I /Y",
 		"electron": "electron dist/packages/electron/main/main.js",
 		"start": "npm run build && npm run electron",
 		"dev": "tsc --watch",
@@ -32,5 +32,8 @@
 	},
 	"keywords": [],
 	"author": "",
-	"license": "ISC"
+	"license": "ISC",
+	"dependencies": {
+		"monaco-editor": "^0.52.2"
+	}
 }

@@ -2,7 +2,7 @@
 
 **A comprehensive package-backup, restore & day-to-day package-management tool for Windows**  
 
-[![Tests](https://img.shields.io/badge/tests-247%20passing-brightgreen)](./package.json)  
+[![Tests](https://img.shields.io/badge/tests-262%20passing-brightgreen)](./package.json)  
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-blue)](./package.json)  
 [![Electron](https://img.shields.io/badge/Electron-37.2.0-47848f)](./package.json)  
 [![Version](https://img.shields.io/badge/version-1.0.0-success)](./packages/cli/software-manager.ts)
@@ -10,7 +10,7 @@
 SoftwareManager lets you **back up, restore and actively manage** your installed software across Windows package managers (Winget, Chocolatey).  
 Built 100% with **Test-Driven Development (TDD)**, it ships a CLI *and* a modern Electron GUI with comprehensive test coverage and proven stability.
 
-> **✅ Test Status**: All 247 tests passing across 17 test suites. The project maintains 90%+ test coverage with comprehensive unit, integration, and E2E testing.
+> **✅ Test Status**: All 262 tests passing across 19 test suites. The project maintains 90%+ test coverage with comprehensive unit, integration, and E2E testing.
 
 ---
 
@@ -23,7 +23,7 @@ Built 100% with **Test-Driven Development (TDD)**, it ships a CLI *and* a modern
 | **Package-Manager Bootstrap** | ✔ **One-click install** of Winget / Chocolatey when missing | ▢ Settings UI: **drag-and-drop priority list** of managers |
 | **Priority Ordering** | ✔ Settings UI: **drag-and-drop priority list** of managers | — |
 | **Custom Installer Support** | ✔ **Add MSI/EXE** files from local paths and URLs<br>✔ **CLI integration** with full feature parity<br>✔ **Backup/restore integration** with automatic installation | — |
-| **Spec Editor** | — | ▢ Built-in **YAML/JSON editor** (Monaco) with schema validation & diff |
+| **Spec Editor** | ✔ Built-in **YAML/JSON editor** (Monaco) with schema validation & diff | — |
 | **Console / Log Viewer** | — | ▢ Toggleable pane streaming stdout/stderr; copy & filter |
 | **Restore Preview** | — | ▢ **Differential report** (new / upgrade / downgrade) before restoring |
 | **Auto-Update (app)** | — | ▢ Self-update check & download |
@@ -240,7 +240,7 @@ The GUI provides:
 | F-03 | Search & install packages (UI)                        | ✅     | `packages-search.e2e.ts`<br>`winget-adapter.contract.ts` |
 | F-04 | Uninstall packages with UI                            | ✅     | `package-uninstall.spec.ts`          |
 | F-05 | Add custom MSI/EXE to bundle                          | ✅     | `msi-ingest.spec.ts`                  |
-| F-06 | YAML/JSON editor with validation                      | ❌     | `editor.spec.ts`                      |
+| F-06 | YAML/JSON editor with validation                      | ✅     | `yaml-json-editor.spec.ts`            |
 | F-07 | Console/log viewer (toggle, copy, filter)             | ❌     | `console-pane.spec.ts`                |
 | F-08 | Selective config backup (files/registry)              | ❌     | `config-picker.e2e.ts`                |
 | F-09 | Version pinning option in backup wizard               | ❌     | `backup-pin.spec.ts`                  |

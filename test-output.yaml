@@ -1,7 +1,1 @@
 packages:
-  - id: chocolatey
-    name: chocolatey
-    version: 2.2.2
-  - id: nodejs
-    name: nodejs
-    version: 20.10.0

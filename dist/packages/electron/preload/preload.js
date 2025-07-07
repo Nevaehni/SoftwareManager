@@ -16,6 +16,10 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     installPackage: (packageId, source, version) => electron_1.ipcRenderer.invoke('install-package', packageId, source, version),
     uninstallPackage: (packageId, source) => electron_1.ipcRenderer.invoke('uninstall-package', packageId, source),
     listInstalledPackages: () => electron_1.ipcRenderer.invoke('list-installed-packages'),
+    // Editor functionality
+    loadSpecFile: () => electron_1.ipcRenderer.invoke('load-spec-file'),
+    saveSpecFile: (content, language) => electron_1.ipcRenderer.invoke('save-spec-file', content, language),
+    validateSpec: (content, language) => electron_1.ipcRenderer.invoke('validate-spec', content, language),
     // Window controls
     minimizeWindow: () => electron_1.ipcRenderer.invoke('minimize-window'),
     maximizeWindow: () => electron_1.ipcRenderer.invoke('maximize-window'),

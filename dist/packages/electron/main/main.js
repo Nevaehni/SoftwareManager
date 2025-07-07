@@ -470,6 +470,152 @@ function setupIpcHandlers() {
             };
         }
     });
+    // Editor functionality IPC handlers
+    electron_1.ipcMain.handle('load-spec-file', async () => {
+        try {
+            const result = await electron_1.dialog.showOpenDialog(mainWindow, {
+                title: 'Select Spec File to Load',
+                filters: [
+                    { name: 'YAML Files', extensions: ['yaml', 'yml'] },
+                    { name: 'JSON Files', extensions: ['json'] },
+                    { name: 'All Files', extensions: ['*'] }
+                ],
+                properties: ['openFile']
+            });
+            if (result.canceled || result.filePaths.length === 0) {
+                return { success: false, error: 'No file selected' };
+            }
+            const filePath = result.filePaths[0];
+            const content = fs.readFileSync(filePath, 'utf8');
+            return {
+                success: true,
+                content,
+                filePath
+            };
+        }
+        catch (error) {
+            console.error('Error loading spec file:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
+        }
+    });
+    electron_1.ipcMain.handle('save-spec-file', async (event, content, language) => {
+        try {
+            const extension = language === 'json' ? 'json' : 'yaml';
+            const result = await electron_1.dialog.showSaveDialog(mainWindow, {
+                title: 'Save Spec File',
+                defaultPath: `backup-spec.${extension}`,
+                filters: [
+                    { name: `${language.toUpperCase()} Files`, extensions: [extension] },
+                    { name: 'All Files', extensions: ['*'] }
+                ]
+            });
+            if (result.canceled || !result.filePath) {
+                return { success: false, error: 'No file path selected' };
+            }
+            fs.writeFileSync(result.filePath, content, 'utf8');
+            return {
+                success: true,
+                filePath: result.filePath
+            };
+        }
+        catch (error) {
+            console.error('Error saving spec file:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
+        }
+    });
+    electron_1.ipcMain.handle('validate-spec', async (event, content, language) => {
+        try {
+            const errors = [];
+            if (!content.trim()) {
+                errors.push('File is empty');
+                return { success: false, errors };
+            }
+            // Parse the content based on language
+            let parsedData;
+            try {
+                if (language === 'json') {
+                    parsedData = JSON.parse(content);
+                }
+                else {
+                    // For YAML, we'll use a simple validation for now
+                    // In a real implementation, you'd use a YAML parser like js-yaml
+                    const yaml = require('js-yaml');
+                    parsedData = yaml.load(content);
+                }
+            }
+            catch (parseError) {
+                errors.push(`Invalid ${language.toUpperCase()} syntax: ${parseError instanceof Error ? parseError.message : 'Unknown syntax error'}`);
+                return { success: false, errors };
+            }
+            // Validate the structure
+            if (typeof parsedData !== 'object' || parsedData === null) {
+                errors.push('Root element must be an object');
+                return { success: false, errors };
+            }
+            // Validate packages array if present
+            if (parsedData.packages) {
+                if (!Array.isArray(parsedData.packages)) {
+                    errors.push('packages must be an array');
+                }
+                else {
+                    parsedData.packages.forEach((pkg, index) => {
+                        if (typeof pkg !== 'object' || pkg === null) {
+                            errors.push(`Package at index ${index} must be an object`);
+                        }
+                        else {
+                            if (!pkg.name) {
+                                errors.push(`Package at index ${index} is missing required field: name`);
+                            }
+                            if (!pkg.id) {
+                                errors.push(`Package at index ${index} is missing required field: id`);
+                            }
+                            if (pkg.source && !['winget', 'chocolatey'].includes(pkg.source)) {
+                                errors.push(`Package at index ${index} has invalid source: ${pkg.source} (must be 'winget' or 'chocolatey')`);
+                            }
+                        }
+                    });
+                }
+            }
+            // Validate customInstallers array if present
+            if (parsedData.customInstallers) {
+                if (!Array.isArray(parsedData.customInstallers)) {
+                    errors.push('customInstallers must be an array');
+                }
+                else {
+                    parsedData.customInstallers.forEach((installer, index) => {
+                        if (typeof installer !== 'object' || installer === null) {
+                            errors.push(`Custom installer at index ${index} must be an object`);
+                        }
+                        else {
+                            if (!installer.name) {
+                                errors.push(`Custom installer at index ${index} is missing required field: name`);
+                            }
+                            if (!installer.path && !installer.downloadUrl) {
+                                errors.push(`Custom installer at index ${index} must have either 'path' or 'downloadUrl'`);
+                            }
+                        }
+                    });
+                }
+            }
+            if (errors.length > 0) {
+                return { success: false, errors };
+            }
+            return { success: true, errors: [] };
+        }
+        catch (error) {
+            console.error('Error validating spec:', error);
+            return {
+                success: false,
+                errors: [error instanceof Error ? error.message : 'Unknown validation error']
+            };
+        }
+    });
 }
 // Settings management
 async function loadSettings() {
