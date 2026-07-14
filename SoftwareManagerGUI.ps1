@@ -130,6 +130,21 @@ function Get-MappingValue {
     return [string]$mapping[$Key]
 }
 
+# A URL-installed app has no repository to list its versions, so its mapping may name one
+# installer per version under 'InstallUrls'. Returns them in file order, empty when it has none.
+function Get-MappingUrls {
+    param([string]$Name)
+
+    $urls = [ordered]@{}
+    $mapping = Get-Mapping $Name
+    if ($mapping -and $mapping.ContainsKey('InstallUrls') -and $mapping['InstallUrls']) {
+        foreach ($version in $mapping['InstallUrls'].Keys) {
+            $urls[[string]$version] = [string]$mapping['InstallUrls'][$version]
+        }
+    }
+    return $urls
+}
+
 function Test-MappingHasConfig {
     param([string]$Name)
     $mapping = Get-Mapping $Name
@@ -190,7 +205,8 @@ function Format-MappingEntry {
         [string[]]$Files,
         [string[]]$Registry,
         [string]$InstallUrl,
-        [string]$DisplayName
+        [string]$DisplayName,
+        $InstallUrls
     )
 
     $sb = [System.Text.StringBuilder]::new()
@@ -212,6 +228,16 @@ function Format-MappingEntry {
     }
 
     $null = $sb.AppendLine("        'InstallUrl' = $(Format-MappingString $InstallUrl.Trim())")
+
+    # [ordered] so the version list keeps the order it was written in - the picker shows it as-is
+    if ($InstallUrls -and $InstallUrls.Count -gt 0) {
+        $null = $sb.AppendLine("        'InstallUrls' = [ordered]@{")
+        foreach ($version in $InstallUrls.Keys) {
+            $null = $sb.AppendLine("            '$([string]$version -replace "'", "''")' = $(Format-MappingString ([string]$InstallUrls[$version]).Trim())")
+        }
+        $null = $sb.AppendLine("        }")
+    }
+
     if ($DisplayName.Trim()) {
         $null = $sb.AppendLine("        'DisplayName' = $(Format-MappingString $DisplayName.Trim())")
     }
@@ -227,7 +253,8 @@ function Set-ConfigMapping {
         [string[]]$Files = @(),
         [string[]]$Registry = @(),
         [string]$InstallUrl = '',
-        [string]$DisplayName = ''
+        [string]$DisplayName = '',
+        $InstallUrls = $null
     )
 
     $text = Get-Content $Script:MappingsFile -Raw
@@ -244,7 +271,7 @@ function Set-ConfigMapping {
     if (-not $table) { throw "Could not find the `$ConfigMappings hashtable in ConfigMappings.ps1" }
 
     $entry = Format-MappingEntry -Name $Name -Folders $Folders -Files $Files -Registry $Registry `
-        -InstallUrl $InstallUrl -DisplayName $DisplayName
+        -InstallUrl $InstallUrl -DisplayName $DisplayName -InstallUrls $InstallUrls
 
     $existing = $table.KeyValuePairs | Where-Object {
         $_.Item1.Extent.Text.Trim().Trim("'", '"') -ieq $Name
@@ -304,7 +331,7 @@ function Remove-ConfigMapping {
 $Script:CatalogSchema = 2
 
 function Import-Catalog {
-    $empty = @{ schema = $Script:CatalogSchema; apps = @{}; packages = @{}; scannedAt = '' }
+    $empty = @{ schema = $Script:CatalogSchema; apps = @{}; packages = @{}; installed = @(); scannedAt = '' }
     if (-not (Test-Path $Script:CatalogFile)) { return $empty }
 
     try {
@@ -316,12 +343,24 @@ function Import-Catalog {
         foreach ($key in 'apps', 'packages') {
             if (-not $data.ContainsKey($key) -or $data[$key] -isnot [hashtable]) { $data[$key] = @{} }
         }
+        # The machine scan itself is cached too, so a relaunch reuses it instead of re-reading
+        # the registry and re-resolving every id. "Rescan PC" is the way to force a fresh read.
+        if (-not $data.ContainsKey('installed') -or $data['installed'] -isnot [array]) { $data['installed'] = @() }
         if (-not $data.ContainsKey('scannedAt')) { $data['scannedAt'] = '' }
         return $data
     }
     catch {
         return $empty
     }
+}
+
+# Store the machine scan (the installed-program list) so the next launch can skip re-reading it
+function Set-CatalogInstalled {
+    param($Items)
+    $Script:Catalog.installed = @($Items | ForEach-Object {
+        @{ Display = [string]$_.Display; Id = [string]$_.Id; Source = [string]$_.Source; Version = [string]$_.Version }
+    })
+    $Script:Catalog.scannedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 }
 
 function Export-Catalog {
@@ -388,6 +427,15 @@ class PackageRow {
     [string]$AltSource       # the other repository that also carries this app, if any
     [string]$AltId
 
+    # A row added straight from "Browse installed" before its package id was known: Name is
+    # still the Windows display name and the id is being looked up in the background. It is
+    # not a real package yet, so it is not saved to packages.txt and cannot be installed.
+    [bool]$Resolving
+
+    # The Windows display name a url row came from, kept so the URL editor can pre-fill its
+    # title when the mapping does not exist yet (a url row still waiting for its installer link).
+    [string]$Title
+
     # Bindable display state. WPF binds to properties, not methods, and a PowerShell class
     # cannot raise PropertyChanged - so these are recomputed by Sync() and the list is
     # refreshed after any background update.
@@ -396,17 +444,25 @@ class PackageRow {
     [bool]$IsPinned
     [bool]$IsWinget
     [bool]$IsUrl
+    [bool]$ShowNoMapping     # a row still being looked up has nothing useful to say about its config
+    [bool]$NeedsUrl          # a url row with no installer link yet - click it to add one
 
     [void] Sync() {
         $this.IsWinget = ($this.Source -eq 'winget')
         $this.IsUrl    = ($this.Source -eq 'url')
+        # A url package with no InstallUrl in its mapping is unfinished - it was added from
+        # "Browse installed" for a program neither repository carries, and needs a link.
+        $this.NeedsUrl = $this.IsUrl -and (-not $this.HasUrl) -and (-not $this.Resolving)
+        $this.ShowNoMapping = (-not $this.HasMapping) -and (-not $this.Resolving) -and (-not $this.NeedsUrl)
         $this.SourceLabel = switch ($this.Source) {
             'winget' { 'winget' }
             'url'    { 'custom URL' }
             default  { 'Chocolatey' }
         }
         $this.IsPinned = [bool]$this.Version
-        $this.VersionLabel = if ($this.Version) { $this.Version }
+        $this.VersionLabel = if ($this.Resolving) { '...' }
+                             elseif ($this.NeedsUrl) { 'set URL' }
+                             elseif ($this.Version) { $this.Version }
                              elseif ($this.Latest) { $this.Latest }
                              else { '-' }
     }
@@ -819,7 +875,7 @@ $sharedResources
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
-      <RowDefinition Height="160"/>
+      <RowDefinition Height="190"/>
     </Grid.RowDefinitions>
 
     <StackPanel Grid.Row="0" Margin="0,0,0,16">
@@ -936,6 +992,39 @@ $sharedResources
 
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="{Binding Name}" FontSize="14" VerticalAlignment="Center"/>
+                <!-- Added from "Browse installed" before its package id was known -->
+                <Border Background="#E6EDFF" BorderBrush="#B9CBFF" BorderThickness="1"
+                        CornerRadius="4" Padding="6,1" Margin="10,0,0,0" VerticalAlignment="Center"
+                        ToolTip="Looking this program up in Chocolatey and winget...">
+                  <Border.Style>
+                    <Style TargetType="Border">
+                      <Setter Property="Visibility" Value="Collapsed"/>
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding Resolving}" Value="True">
+                          <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="checking..." FontSize="10.5" Foreground="#2F4C9E"/>
+                </Border>
+                <!-- A custom-installer package that still needs its download link. Neither
+                     repository carries it, so click the row's source or version cell to add one. -->
+                <Border Background="#FDE7E6" BorderBrush="#F0B4AE" BorderThickness="1"
+                        CornerRadius="4" Padding="6,1" Margin="10,0,0,0" VerticalAlignment="Center"
+                        ToolTip="Neither Chocolatey nor winget has this - click the source or version cell to add an installer URL.">
+                  <Border.Style>
+                    <Style TargetType="Border">
+                      <Setter Property="Visibility" Value="Collapsed"/>
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding NeedsUrl}" Value="True">
+                          <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <TextBlock Text="needs URL" FontSize="10.5" Foreground="#B0553F"/>
+                </Border>
                 <Border Background="#FFF3D9" BorderBrush="#E8C583" BorderThickness="1"
                         CornerRadius="4" Padding="6,1" Margin="10,0,0,0" VerticalAlignment="Center"
                         ToolTip="Nothing to back up: no config paths in ConfigMappings.ps1. Use the actions menu to add some.">
@@ -943,7 +1032,7 @@ $sharedResources
                     <Style TargetType="Border">
                       <Setter Property="Visibility" Value="Collapsed"/>
                       <Style.Triggers>
-                        <DataTrigger Binding="{Binding HasMapping}" Value="False">
+                        <DataTrigger Binding="{Binding ShowNoMapping}" Value="True">
                           <Setter Property="Visibility" Value="Visible"/>
                         </DataTrigger>
                       </Style.Triggers>
@@ -1093,24 +1182,44 @@ $sharedResources
     </Grid>
 
     <Border Grid.Row="8" Background="{StaticResource Card}" CornerRadius="8"
-            BorderBrush="{StaticResource Border}" BorderThickness="1" Padding="10">
-      <ListBox x:Name="LogList" Background="Transparent" BorderThickness="0"
-               FontFamily="Cascadia Mono, Consolas" FontSize="12"
-               ScrollViewer.HorizontalScrollBarVisibility="Auto">
-        <ListBox.ItemContainerStyle>
-          <Style TargetType="ListBoxItem">
-            <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Padding" Value="2,1"/>
-            <Setter Property="Template">
-              <Setter.Value>
-                <ControlTemplate TargetType="ListBoxItem">
-                  <ContentPresenter Margin="{TemplateBinding Padding}"/>
-                </ControlTemplate>
-              </Setter.Value>
-            </Setter>
-          </Style>
-        </ListBox.ItemContainerStyle>
-      </ListBox>
+            BorderBrush="{StaticResource Border}" BorderThickness="1" Padding="10,6,10,10">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="2,0,0,4">
+          <TextBlock Text="LOG" Foreground="{StaticResource Muted}" FontSize="11" FontWeight="Bold"
+                     VerticalAlignment="Center"/>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="CopyLogBtn" Style="{StaticResource IconButton}"
+                    FontFamily="Segoe MDL2 Assets" Content="&#xE8C8;"
+                    ToolTip="Copy the log to the clipboard"/>
+            <Button x:Name="ClearLogBtn" Style="{StaticResource RemoveButton}"
+                    FontFamily="Segoe MDL2 Assets" Content="&#xE74D;" Margin="2,0,0,0"
+                    ToolTip="Clear the log shown here (install-log.txt is untouched)"/>
+          </StackPanel>
+        </Grid>
+
+        <ListBox x:Name="LogList" Grid.Row="1" Background="Transparent" BorderThickness="0"
+                 FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto">
+          <ListBox.ItemContainerStyle>
+            <Style TargetType="ListBoxItem">
+              <Setter Property="Focusable" Value="False"/>
+              <Setter Property="Padding" Value="2,1"/>
+              <Setter Property="Template">
+                <Setter.Value>
+                  <ControlTemplate TargetType="ListBoxItem">
+                    <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                  </ControlTemplate>
+                </Setter.Value>
+              </Setter>
+            </Style>
+          </ListBox.ItemContainerStyle>
+        </ListBox>
+      </Grid>
     </Border>
   </Grid>
 </Window>
@@ -1122,7 +1231,7 @@ $Script:Ui = @{}
 foreach ($name in 'AddBox', 'AddHint', 'AddBtn', 'UrlBtn', 'BrowseBtn', 'HdrConfig', 'PkgList',
                   'DetailPane', 'DetailTitle', 'DetailMeta', 'DetailConfig', 'DetailConfigBtn', 'DetailActionsBtn',
                   'BackupBtn', 'InstallBtn', 'SaveBtn', 'StatusText', 'Progress', 'ProgressText', 'LogList',
-                  'ChocoBanner', 'InstallChocoBtn') {
+                  'CopyLogBtn', 'ClearLogBtn', 'ChocoBanner', 'InstallChocoBtn') {
     $Script:Ui[$name] = $Script:Window.FindName($name)
 }
 
@@ -1162,11 +1271,32 @@ function Add-LogLine {
     }
 
     $tb = [System.Windows.Controls.TextBlock]::new()
-    $tb.Text = $Text
+    $tb.Text = "[$(Get-Date -Format 'HH:mm:ss')] $Text"
     $tb.Foreground = Get-Brush $Script:LevelColors[$Level]
     $null = $Script:Ui.LogList.Items.Add($tb)
     while ($Script:Ui.LogList.Items.Count -gt 500) { $Script:Ui.LogList.Items.RemoveAt(0) }
     $Script:Ui.LogList.ScrollIntoView($Script:Ui.LogList.Items[$Script:Ui.LogList.Items.Count - 1])
+}
+
+function Copy-LogToClipboard {
+    $lines = @($Script:Ui.LogList.Items | ForEach-Object { $_.Text })
+    if ($lines.Count -eq 0) {
+        Set-Status 'The log is empty - nothing to copy' '#8A6100'
+        return
+    }
+    try {
+        [System.Windows.Clipboard]::SetText($lines -join "`r`n")
+        Set-Status "Copied $($lines.Count) log line(s) to the clipboard" '#1F7A3D'
+    }
+    catch {
+        # The clipboard is a shared resource; another process can hold it open
+        Set-Status "Could not copy to the clipboard: $_" '#C0392B'
+    }
+}
+
+function Clear-LogPane {
+    $Script:Ui.LogList.Items.Clear()
+    Set-Status 'Cleared the log (install-log.txt still has everything)'
 }
 
 foreach ($pending in @($Script:PendingLog)) {
@@ -1193,6 +1323,10 @@ function Update-PackageList {
 # Runs a scriptblock in a background runspace and calls OnComplete on the UI thread with its
 # output. Every choco/winget call goes through this so the window never freezes. Work that
 # reports progress enqueues strings into the queue it is handed, drained on each tick.
+#
+# Returns a handle whose Cancelled flag can be set to abandon the job: the next tick tears the
+# runspace down and OnComplete is never called. Whatever the work already reported through the
+# progress queue has been applied, and stays applied - cancelling stops it, it does not undo it.
 function Start-BackgroundJob {
     param(
         [scriptblock]$Work,
@@ -1212,9 +1346,27 @@ function Start-BackgroundJob {
     $null = $ps.AddArgument($progressQueue)
     $async = $ps.BeginInvoke()
 
+    $job = [pscustomobject]@{ Cancelled = $false }
+
     $timer = [System.Windows.Threading.DispatcherTimer]::new()
     $timer.Interval = [timespan]::FromMilliseconds(120)
+    # A closure, but it captures only its own locals and calls nothing but script functions -
+    # see the note in Add-Package about why a closure must never touch $Script: inline.
     $timer.Add_Tick({
+        if ($job.Cancelled) {
+            $timer.Stop()
+            # BeginStop, not Stop: the work is mid-`choco search` and Stop() would block the UI
+            # thread until it returns. Dispose from the callback once it has actually wound down.
+            $done = [AsyncCallback]{
+                param($result)
+                try { $ps.EndStop($result) } catch { }
+                $ps.Dispose()
+                $runspace.Dispose()
+            }
+            try { $null = $ps.BeginStop($done, $null) } catch { }
+            return
+        }
+
         $update = $null
         while ($progressQueue.TryDequeue([ref]$update)) {
             if ($OnProgress) {
@@ -1232,6 +1384,8 @@ function Start-BackgroundJob {
         catch { Add-LogLine "Background task result could not be applied: $_" 'Error' }
     }.GetNewClosure())
     $timer.Start()
+
+    return $job
 }
 
 # All repository lookups live in one scriptblock so the id-guessing logic is written once. It
@@ -1284,7 +1438,11 @@ $Script:PkgWork = {
     function Get-CandidateIds {
         param([string]$Name)
 
-        $clean = $Name -replace '\(.*?\)', ' ' -replace '\d+(\.\d+)+', ' ' -replace '[(R)(TM)]', ' '
+        # Strip the parenthesised noise Windows names carry ("(64-bit x64)"), version numbers,
+        # and the trademark marks. NOT with a character class: -replace is case-insensitive, so
+        # '[(R)(TM)]' deletes every r, t and m in the name - "Notepad++" became "No epad++" and
+        # matched nothing at all.
+        $clean = $Name -replace '\(.*?\)', ' ' -replace '\d+(\.\d+)+', ' ' -replace '[®™]', ' '
         $clean = $clean -replace '\+\+', 'plusplus'   # Notepad++ -> notepadplusplus
         $words = @($clean -split '[^A-Za-z0-9]+' | ForEach-Object { $_.ToLower() } | Where-Object { $_ })
         if ($words.Count -eq 0) { return @() }
@@ -1689,7 +1847,7 @@ function Install-ChocolateyFromGui {
     # Plain scriptblocks, not closures - see the note in Add-Package
     $Script:ChocoCtx = @{ OnSuccess = $OnSuccess }
 
-    Start-BackgroundJob -Work $Script:InstallChocoWork -Arguments @($Script:EnginePath) -OnProgress {
+    $null = Start-BackgroundJob -Work $Script:InstallChocoWork -Arguments @($Script:EnginePath) -OnProgress {
         param($Update)
         $parts = $Update -split '\|', 2
         Add-LogLine $parts[1] $parts[0]
@@ -1761,6 +1919,36 @@ function Add-PackageRow {
     return $row
 }
 
+# Turns a Windows display name into a package id: "balenaEtcher 1.19 (x64)" -> "balenaetcher"
+function ConvertTo-PackageId {
+    param([string]$Display)
+    return (($Display -replace '\(.*?\)', ' ' -replace '\d+(\.\d+)+', ' ' -replace '\+\+', 'plusplus') -replace '[^A-Za-z0-9]', '').ToLower()
+}
+
+# A program neither repository carries becomes a custom-installer row with no link yet, so the
+# user can add its URL from the list instead of being interrupted by a dialog. The Windows
+# display name is kept in Title so the URL editor can pre-fill it. Returns the row, or $null
+# when the derived id collides with a package already on the list.
+function Add-UrlPlaceholderRow {
+    param([string]$Display)
+
+    $name = ConvertTo-PackageId $Display
+    if (-not $name) { $name = 'app' }
+    if (Test-DuplicatePackage $name) {
+        Add-LogLine "'$Display' resolves to id '$name', which is already in the list" 'Detail'
+        return $null
+    }
+
+    $row = New-PackageRow -Name $name -Source 'url'
+    $row.Title = $Display
+    $row.Config = $false
+    $row.Sync()
+    $Script:Rows.Add($row)
+    $Script:Ui.PkgList.ScrollIntoView($row)
+    Add-LogLine "Added '$Display' as a custom installer ($name) - it needs a download URL" 'Info'
+    return $row
+}
+
 function Add-Package {
     if (-not $Script:Ui.AddBtn.IsEnabled) { return }
 
@@ -1801,7 +1989,7 @@ function Add-Package {
     # travel through script scope instead.
     $Script:AddCtx = @{ Name = $name }
 
-    Start-BackgroundJob -Work $Script:PkgWork -Arguments @('verify', $name) -OnComplete {
+    $null = Start-BackgroundJob -Work $Script:PkgWork -Arguments @('verify', $name) -OnComplete {
         param($Output)
 
         $name = $Script:AddCtx.Name
@@ -1833,7 +2021,7 @@ function Find-Package {
     $Script:Ui.AddBtn.Content = 'Searching...'
     $Script:FindCtx = @{ Term = $Term }
 
-    Start-BackgroundJob -Work $Script:PkgWork -Arguments @('search', $Term) -OnComplete {
+    $null = Start-BackgroundJob -Work $Script:PkgWork -Arguments @('search', $Term) -OnComplete {
         param($Output)
 
         $term = $Script:FindCtx.Term
@@ -2039,9 +2227,14 @@ $sharedResources
     <TextBox x:Name="NameBox"/>
 
     <TextBlock Text="Installer URL" FontWeight="SemiBold" Margin="0,12,0,0"/>
-    <TextBlock Text="A direct link ending in .exe or .msi. A link to a Chocolatey feed works too."
+    <TextBlock Text="A direct link ending in .exe or .msi, used when no version is pinned. A link to a Chocolatey feed works too. Leave it blank to reuse the newest version installer below."
                Foreground="{StaticResource Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,2,0,4"/>
     <TextBox x:Name="UrlBox"/>
+
+    <TextBlock Text="Version installers (optional)" FontWeight="SemiBold" Margin="0,12,0,0"/>
+    <TextBlock Text="No repository lists this app's versions, so pinning one means naming its installer. One per line, newest first: 1.19.0 = https://example.com/app-1.19.0.exe"
+               Foreground="{StaticResource Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,2,0,4"/>
+    <TextBox x:Name="VersionsBox" Style="{StaticResource MultiLineBox}" Height="80"/>
 
     <CheckBox x:Name="ConfigBox" Content="Back up and restore this app's config" Margin="0,14,0,0"/>
 
@@ -2065,17 +2258,22 @@ $sharedResources
     }
 
     $Script:Url = @{
-        Dialog    = $dialog
-        TitleBox  = $dialog.FindName('TitleBox')
-        NameBox   = $dialog.FindName('NameBox')
-        UrlBox    = $dialog.FindName('UrlBox')
-        ConfigBox = $dialog.FindName('ConfigBox')
-        ErrorText = $dialog.FindName('ErrorText')
-        Row       = $Row
+        Dialog      = $dialog
+        TitleBox    = $dialog.FindName('TitleBox')
+        NameBox     = $dialog.FindName('NameBox')
+        UrlBox      = $dialog.FindName('UrlBox')
+        VersionsBox = $dialog.FindName('VersionsBox')
+        ConfigBox   = $dialog.FindName('ConfigBox')
+        ErrorText   = $dialog.FindName('ErrorText')
+        Row         = $Row
     }
     $Script:Url.TitleBox.Text = $Title
     $Script:Url.NameBox.Text  = $Name
     $Script:Url.UrlBox.Text   = $Url
+
+    $existingUrls = if ($Name) { Get-MappingUrls $Name } else { [ordered]@{} }
+    $Script:Url.VersionsBox.Text = (@($existingUrls.Keys | ForEach-Object { "$_ = $($existingUrls[$_])" })) -join "`r`n"
+
     if ($Row) {
         $Script:Url.ConfigBox.IsChecked = $Row.Config
         $Script:Url.NameBox.IsEnabled = $false     # renaming would orphan its mapping
@@ -2102,8 +2300,43 @@ function Save-UrlPackage {
 
     if (-not $title) { Show-UrlError 'Give the app a name.'; return }
     if ($name -notmatch '^[A-Za-z0-9._-]+$') { Show-UrlError 'The package id may only contain letters, digits, dot, dash and underscore.'; return }
-    if ($url -notmatch '^(?i)https?://') { Show-UrlError 'The installer URL must start with http:// or https://'; return }
     if (-not $dlg.Row -and (Test-DuplicatePackage $name)) { Show-UrlError "'$name' is already in the list."; return }
+
+    # One installer per version: "1.19.0 = https://example.com/app-1.19.0.exe". Order is kept,
+    # so the version picker lists them exactly as they are written here.
+    $versionUrls = [ordered]@{}
+    foreach ($line in ($dlg.VersionsBox.Text -split "`r?`n")) {
+        $entry = $line.Trim()
+        if (-not $entry) { continue }
+        if ($entry -notmatch '^(.+?)\s*=\s*(\S+)$') {
+            Show-UrlError "Each version line must read '<version> = <url>'. Fix: $entry"
+            return
+        }
+        $version = $Matches[1].Trim()
+        $link    = $Matches[2].Trim()
+        if ($link -notmatch '^(?i)https?://') {
+            Show-UrlError "The installer URL for $version must start with http:// or https://"
+            return
+        }
+        if ($versionUrls.Contains($version)) {
+            Show-UrlError "Version $version is listed twice."
+            return
+        }
+        $versionUrls[$version] = $link
+    }
+
+    # The plain URL is what installs when no version is pinned. When it is left blank but the
+    # version list has entries, the newest (first) one stands in for it - the user should not
+    # have to type the latest installer twice.
+    if (-not $url -and $versionUrls.Count -gt 0) {
+        $url = [string]$versionUrls[@($versionUrls.Keys)[0]]
+    }
+
+    if (-not $url) {
+        Show-UrlError 'Give an installer URL, or at least one version installer to take the latest from.'
+        return
+    }
+    if ($url -notmatch '^(?i)https?://') { Show-UrlError 'The installer URL must start with http:// or https://'; return }
 
     if ($url -notmatch '(?i)\.(exe|msi)(\?|#|$)') {
         $answer = [System.Windows.MessageBox]::Show($dlg.Dialog,
@@ -2119,7 +2352,7 @@ function Save-UrlPackage {
             -Folders  @(if ($existing) { $existing['Folders'] }) `
             -Files    @(if ($existing) { $existing['Files'] }) `
             -Registry @(if ($existing) { $existing['Registry'] }) `
-            -InstallUrl $url -DisplayName $title
+            -InstallUrl $url -DisplayName $title -InstallUrls $versionUrls
     }
     catch {
         Show-UrlError "Could not write ConfigMappings.ps1: $_"
@@ -2129,6 +2362,12 @@ function Save-UrlPackage {
     if ($dlg.Row) {
         $dlg.Row.Source = 'url'
         $dlg.Row.Config = [bool]$dlg.ConfigBox.IsChecked
+        # A pin to a version that no longer has an installer would silently fall back to the
+        # plain InstallUrl, so drop it
+        if ($dlg.Row.Version -and -not $versionUrls.Contains($dlg.Row.Version)) {
+            Add-LogLine "$name is no longer pinned to $($dlg.Row.Version) - that version has no installer URL." 'Warning'
+            $dlg.Row.Version = ''
+        }
         Update-RowMapping $dlg.Row
         $dlg.Row.Sync()
         Add-LogLine "Updated the custom installer for $name" 'Info'
@@ -2281,7 +2520,10 @@ function Invoke-RowAction {
         'source'  { Show-SourceMenu -Target $Script:Ui.DetailActionsBtn -Row $Row }
         'version' { Show-VersionDialog -Row $Row }
         'url' {
-            Show-UrlDialog -Name $Row.Name -Title (Get-MappingValue $Row.Name 'DisplayName') `
+            # A placeholder row has no mapping yet, so fall back to the Windows name kept in Title
+            $title = Get-MappingValue $Row.Name 'DisplayName'
+            if (-not $title) { $title = $Row.Title }
+            Show-UrlDialog -Name $Row.Name -Title $title `
                 -Url (Get-MappingValue $Row.Name 'InstallUrl') -Row $Row
         }
         'remove' {
@@ -2348,7 +2590,7 @@ function Find-AlternateSource {
 function Update-PackageMeta {
     param($Rows, [scriptblock]$OnDone)
 
-    $pending = @($Rows | Where-Object { $_.Source -ne 'url' })
+    $pending = @($Rows | Where-Object { $_.Source -ne 'url' -and -not $_.Resolving })
     if ($pending.Count -eq 0) {
         if ($OnDone) { & $OnDone }
         return
@@ -2358,7 +2600,7 @@ function Update-PackageMeta {
     $payload = @($pending | ForEach-Object { @{ Source = $_.Source; Id = $_.Name } })
     $Script:MetaCtx = @{ OnDone = $OnDone }
 
-    Start-BackgroundJob -Work $Script:PkgWork -Arguments @('meta', $payload) -OnComplete {
+    $null = Start-BackgroundJob -Work $Script:PkgWork -Arguments @('meta', $payload) -OnComplete {
         param($Output)
 
         $changed = $false
@@ -2395,11 +2637,17 @@ class VersionRow {
 function Show-VersionDialog {
     param([PackageRow]$Row)
 
+    # A URL-installed app has no repository to ask, so its versions are the ones its mapping
+    # names an installer for. Without any, there is nothing to pin to.
+    $urlVersions = @()
     if ($Row.Source -eq 'url') {
-        $null = [System.Windows.MessageBox]::Show($Script:Window,
-            "$($Row.Name) installs from a fixed URL, so there is no version list to pick from. Point its URL at a different installer instead.",
-            'Software Manager', 'OK', 'Information')
-        return
+        $urlVersions = @((Get-MappingUrls $Row.Name).Keys)
+        if ($urlVersions.Count -eq 0) {
+            $null = [System.Windows.MessageBox]::Show($Script:Window,
+                "$($Row.Name) installs from a single fixed URL, so there is no version list to pick from.`n`nAdd one installer URL per version under `"Edit installer URL...`" and they will show up here.",
+                'Software Manager', 'OK', 'Information')
+            return
+        }
     }
 
     $dialogXaml = @"
@@ -2490,36 +2738,47 @@ $sharedResources
     $Script:Ver.OkBtn.Add_Click({ Set-RowVersion })
     $Script:Ver.List.Add_MouseDoubleClick({ Set-RowVersion })
 
-    Start-BackgroundJob -Work $Script:PkgWork -Arguments @('versions', @{ Source = $Row.Source; Id = $Row.Name }) -OnComplete {
-        param($Output)
+    if ($Row.Source -eq 'url') {
+        # Already known - the mapping is the version list, there is nothing to look up
+        Set-VersionList -Versions $urlVersions
+    }
+    else {
+        $null = Start-BackgroundJob -Work $Script:PkgWork -Arguments @('versions', @{ Source = $Row.Source; Id = $Row.Name }) -OnComplete {
+            param($Output)
 
-        if (-not $Script:Ver) { return }   # closed before the lookup finished
-
-        $latest = [VersionRow]::new()
-        $latest.Version = ''
-        $latest.Label = 'Latest (no pin)'
-        $Script:Ver.Rows.Add($latest)
-
-        foreach ($version in @($Output | Where-Object { $_ -is [string] -and $_ })) {
-            $item = [VersionRow]::new()
-            $item.Version = $version
-            $item.Label = $version
-            $Script:Ver.Rows.Add($item)
+            if (-not $Script:Ver) { return }   # closed before the lookup finished
+            Set-VersionList -Versions @($Output | Where-Object { $_ -is [string] -and $_ })
         }
-
-        $Script:Ver.Loading.Visibility = 'Collapsed'
-        $Script:Ver.OkBtn.IsEnabled = $true
-        if ($Script:Ver.Rows.Count -eq 1) {
-            $Script:Ver.Loading.Text = 'No version list available - only "latest" can be used.'
-            $Script:Ver.Loading.Visibility = 'Visible'
-        }
-
-        $current = @($Script:Ver.Rows | Where-Object { $_.Version -eq $Script:Ver.Row.Version }) | Select-Object -First 1
-        $Script:Ver.List.SelectedItem = if ($current) { $current } else { $latest }
     }
 
     $null = $dialog.ShowDialog()
     $Script:Ver = $null
+}
+
+function Set-VersionList {
+    param([string[]]$Versions)
+
+    $latest = [VersionRow]::new()
+    $latest.Version = ''
+    $latest.Label = 'Latest (no pin)'
+    $Script:Ver.Rows.Add($latest)
+
+    foreach ($version in $Versions) {
+        $item = [VersionRow]::new()
+        $item.Version = $version
+        $item.Label = $version
+        $Script:Ver.Rows.Add($item)
+    }
+
+    $Script:Ver.Loading.Visibility = 'Collapsed'
+    $Script:Ver.OkBtn.IsEnabled = $true
+    if ($Script:Ver.Rows.Count -eq 1) {
+        $Script:Ver.Loading.Text = 'No version list available - only "latest" can be used.'
+        $Script:Ver.Loading.Visibility = 'Visible'
+    }
+
+    $current = @($Script:Ver.Rows | Where-Object { $_.Version -eq $Script:Ver.Row.Version }) | Select-Object -First 1
+    $Script:Ver.List.SelectedItem = if ($current) { $current } else { $latest }
 }
 
 function Set-RowVersion {
@@ -2657,9 +2916,11 @@ function Save-PackageConfig {
     }
 
     try {
+        # Only the config paths change here - the install details are the URL dialog's business
         Set-ConfigMapping -Name $row.Name -Files $files -Folders $folders -Registry $registry `
             -InstallUrl (Get-MappingValue $row.Name 'InstallUrl') `
-            -DisplayName (Get-MappingValue $row.Name 'DisplayName')
+            -DisplayName (Get-MappingValue $row.Name 'DisplayName') `
+            -InstallUrls (Get-MappingUrls $row.Name)
     }
     catch {
         $dlg.ErrorText.Text = "$_"
@@ -2843,6 +3104,7 @@ $sharedResources
         AddBtn      = $dialog.FindName('AddSelectedBtn')
         CancelBtn   = $dialog.FindName('CancelBtn')
         Resolving   = $false
+        Job         = $null      # the in-flight match, so Add / Cancel can call it off
     }
 
     $Script:Dlg.FilterBox.Add_TextChanged({
@@ -2862,9 +3124,15 @@ $sharedResources
     $Script:Dlg.RecheckBtn.Add_Click({ Reset-InstalledCatalog })
     $Script:Dlg.AddBtn.Add_Click({ Add-SelectedInstalled })
 
-    # Reuse the previous machine scan - the list of installed programs rarely changes
-    # mid-session, and the ids behind it are cached anyway. "Rescan PC" forces a new one.
+    # Reuse the previous machine scan - the list of installed programs rarely changes, and the
+    # ids behind it are cached anyway. Prefer the in-memory copy from this session; failing that,
+    # the one persisted in catalog.json from a previous launch. "Rescan PC" forces a fresh read.
     if ($Script:InstalledCache) {
+        Update-InstalledList -Items $Script:InstalledCache
+    }
+    elseif (@($Script:Catalog.installed).Count -gt 0) {
+        $Script:InstalledCache = @($Script:Catalog.installed)
+        Add-LogLine "Loaded $($Script:InstalledCache.Count) installed program(s) from the last scan ($($Script:Catalog.scannedAt))" 'Detail'
         Update-InstalledList -Items $Script:InstalledCache
     }
     else {
@@ -2872,18 +3140,36 @@ $sharedResources
     }
 
     $null = $dialog.ShowDialog()
+
+    # The match runs in the background; nothing may be left pointing at a dialog that is gone
+    Stop-InstalledResolve
     $Script:Dlg = $null
-    Complete-UnmatchedInstalled
+
+    # Runs a background lookup that opens no modal, but only after this dialog has closed so its
+    # rows are already on the list
+    Start-PendingResolve
+}
+
+# Calls off the in-flight match. Whatever it already reported is kept - the rows it filled in
+# are correct, they are just no longer being added to. Its OnComplete (which is what normally
+# writes catalog.json) never runs for a cancelled job, so the ids resolved this session are
+# flushed to disk here instead - otherwise closing the dialog throws away everything it learned.
+function Stop-InstalledResolve {
+    if (-not $Script:Dlg) { return }
+    $wasResolving = [bool]$Script:Dlg.Job
+    if ($Script:Dlg.Job) { $Script:Dlg.Job.Cancelled = $true }
+    $Script:Dlg.Job = $null
+    $Script:Dlg.Resolving = $false
+    if ($wasResolving) { Export-Catalog }
 }
 
 function Update-SyncText {
-    $checked = @($Script:Catalog.apps.Values | ForEach-Object { $_.checkedAt } | Where-Object { $_ })
-    $last = ($checked | Sort-Object -Descending | Select-Object -First 1)
     $known = @($Script:Catalog.apps.Values | Where-Object { $_.id }).Count
     $missing = $Script:Catalog.apps.Count - $known
+    $scanned = [string]$Script:Catalog.scannedAt
 
-    $Script:Dlg.SyncText.Text = if ($last) {
-        "Last synced $last  |  $known matched, $missing with no package  |  cached in catalog.json"
+    $Script:Dlg.SyncText.Text = if ($scanned) {
+        "PC scanned $scanned  |  $known matched, $missing with no package  |  cached in catalog.json - use Rescan PC to refresh"
     }
     else {
         'Never synced - package ids are being looked up now.'
@@ -2963,10 +3249,13 @@ function Start-InstalledScan {
     $dlg.LoadingText.Visibility = 'Visible'
     $dlg.Status.Text = ''
 
-    Start-BackgroundJob -Work $Script:PkgWork -Arguments @('scan', $null) -OnComplete {
+    $null = Start-BackgroundJob -Work $Script:PkgWork -Arguments @('scan', $null) -OnComplete {
         param($Output)
         $Script:InstalledCache = @($Output | Where-Object { $_ -is [hashtable] })
         Add-LogLine "Scanned this PC: $($Script:InstalledCache.Count) installed program(s)" 'Detail'
+        # Persist the list so the next launch reuses it instead of reading the machine again
+        Set-CatalogInstalled -Items $Script:InstalledCache
+        Export-Catalog
         Update-InstalledList -Items $Script:InstalledCache
     }
 }
@@ -3020,12 +3309,16 @@ function Start-InstalledResolve {
     $dlg.AppList.Items.Refresh()
 
     $dlg.Resolving = $true
-    $dlg.AddBtn.IsEnabled = $false
+    # "Add selected" stays live: waiting for a hundred programs to be matched before you may
+    # pick the three you came for is the whole complaint. Adding calls the match off and
+    # re-runs it against the selection alone.
     $dlg.RecheckBtn.IsEnabled = $false
     $dlg.Status.Text = "Matching $($pending.Count) program(s)..."
 
-    Start-BackgroundJob -Work $Script:PkgWork -Arguments @('resolve', @($pending.Display)) -OnProgress {
+    $dlg.Job = Start-BackgroundJob -Work $Script:PkgWork -Arguments @('resolve', @($pending.Display)) -OnProgress {
         param($Update)
+
+        if (-not $Script:Dlg) { return }
 
         $parts = $Update -split "`t"
         if ($parts[0] -eq 'PROGRESS') {
@@ -3067,7 +3360,7 @@ function Start-InstalledResolve {
         if (-not $dlg) { return }   # dialog closed while the lookup was running
 
         $dlg.Resolving = $false
-        $dlg.AddBtn.IsEnabled = $true
+        $dlg.Job = $null
         $dlg.RecheckBtn.IsEnabled = $true
 
         $unmatched = @($dlg.Apps | Where-Object { -not $_.Resolved }).Count
@@ -3082,8 +3375,13 @@ function Add-SelectedInstalled {
     $selected = @($dlg.Apps | Where-Object { $_.Selected })
     if ($selected.Count -eq 0) { return }
 
-    $resolved = @($selected | Where-Object { $_.Resolved -and $_.Id })
-    $unmatched = @($selected | Where-Object { -not ($_.Resolved -and $_.Id) })
+    # Picking a program is the answer - the match running over the other hundred is no longer
+    # worth waiting for. Call it off; the selection is matched on its own below.
+    Stop-InstalledResolve
+
+    $resolved  = @($selected | Where-Object { $_.Resolved -and $_.Id })
+    $unchecked = @($selected | Where-Object { -not $_.Resolved -and $_.State -ne 'notfound' })
+    $unmatched = @($selected | Where-Object { -not $_.Resolved -and $_.State -eq 'notfound' })
 
     $added = 0
     foreach ($app in $resolved) {
@@ -3094,37 +3392,128 @@ function Add-SelectedInstalled {
         $added++
     }
 
+    # A program whose id is not known yet still goes on the list right now, under the name
+    # Windows gives it, and is looked up in the background once this dialog is out of the way.
+    foreach ($app in $unchecked) {
+        if (Test-DuplicatePackage $app.Display) { continue }
+        $row = Add-PackageRow -Name $app.Display
+        $row.Resolving = $true
+        $row.Sync()
+        $added++
+    }
+
+    # A program neither repository has is not dropped and does not interrupt with a dialog: it
+    # goes on the list as a custom-installer row flagged "needs URL", to be completed from there.
+    foreach ($app in $unmatched) {
+        if (Add-UrlPlaceholderRow -Display $app.Display) { $added++ }
+    }
+
     if ($added -gt 0) {
         Set-Dirty
         Update-PackageList
     }
 
-    # Nothing is dropped on the floor: a program neither repository has can still be installed
-    # from its own installer. The offer is made once this dialog has actually closed - a modal
-    # opened from inside a closing modal lands behind it.
-    $Script:PendingUrlAdds = $unmatched
-
     $dlg.Dialog.Close()
     Set-Status "Added $added package(s)" $(if ($added) { '#1F7A3D' } else { '#8A6100' })
 }
 
-function Complete-UnmatchedInstalled {
-    $unmatched = @($Script:PendingUrlAdds)
-    $Script:PendingUrlAdds = $null
-    if ($unmatched.Count -eq 0) { return }
+# --- Matching the packages added before they were checked ---
+#
+# A row added straight from "Browse installed" carries the Windows display name, not a package
+# id. Look each one up in the background and swap in the id that comes back; a program neither
+# repository carries becomes a custom-installer row for the user to add a URL to.
 
-    $names = ($unmatched | Select-Object -First 5 | ForEach-Object { $_.Display }) -join "`n  "
-    $more = if ($unmatched.Count -gt 5) { "`n  ...and $($unmatched.Count - 5) more" } else { '' }
-    $answer = [System.Windows.MessageBox]::Show($Script:Window,
-        "$($unmatched.Count) selected program(s) are on neither Chocolatey nor winget:`n`n  $names$more`n`nAdd them as custom installers? You will be asked for a download link for each.",
-        'Software Manager', 'YesNo', 'Question')
-    if ($answer -ne 'Yes') {
-        Add-LogLine "Skipped $($unmatched.Count) program(s) with no package: $(@($unmatched.Display) -join '; ')" 'Warning'
+function Start-PendingResolve {
+    $pending = @($Script:Rows | Where-Object { $_.Resolving })
+    if ($pending.Count -eq 0) { return }
+
+    if (-not $Script:ChocoAvailable -and -not $Script:WingetAvailable) {
+        Add-LogLine "Cannot look up $($pending.Count) package(s) without Chocolatey or winget." 'Warning'
         return
     }
 
-    foreach ($app in $unmatched) {
-        Show-UrlDialog -Title $app.Display
+    $Script:Ui.Progress.IsIndeterminate = $true
+    $Script:Ui.ProgressText.Text = "Checking $($pending.Count) package(s)..."
+    Set-Status "Checking $($pending.Count) package(s) against Chocolatey and winget..."
+
+    $null = Start-BackgroundJob -Work $Script:PkgWork -Arguments @('resolve', @($pending.Name)) -OnProgress {
+        param($Update)
+
+        $parts = $Update -split "`t"
+        if ($parts[0] -eq 'PROGRESS') {
+            $Script:Ui.ProgressText.Text = "Checking $($parts[1])/$($parts[2]): $($parts[3])"
+            return
+        }
+        if ($parts[0] -ne 'RESULT') { return }
+
+        $display = $parts[1]
+        $id      = $parts[2]
+        $source  = $parts[3]
+        $version = if ($parts.Count -gt 4) { $parts[4] } else { '' }
+
+        Set-CatalogApp -Display $display -Id $id -Source $source -Version $version
+
+        $row = $Script:Rows | Where-Object { $_.Resolving -and $_.Name -eq $display } | Select-Object -First 1
+        if (-not $row) { return }
+
+        if (-not $id) {
+            # Neither repository has it. It stays on the list as a custom-installer row, flagged
+            # "needs URL", with the Windows name kept so the URL editor can pre-fill its title.
+            $newId = ConvertTo-PackageId $display
+            if (-not $newId) { $newId = 'app' }
+            if ($newId -ine $display -and (Test-DuplicatePackage $newId)) {
+                $null = $Script:Rows.Remove($row)
+                Add-LogLine "'$display' resolves to id '$newId', which is already in the list" 'Detail'
+                Update-PackageList
+                return
+            }
+            $row.Title     = $display
+            $row.Name      = $newId
+            $row.Source    = 'url'
+            $row.Version   = ''
+            $row.Latest    = ''
+            $row.Resolving = $false
+            Update-RowMapping $row
+            $row.Config = $false
+            $row.Sync()
+            Add-LogLine "'$display' is on neither Chocolatey nor winget - added as a custom installer ($newId), add its URL" 'Info'
+            Update-PackageList
+            return
+        }
+
+        if (Test-DuplicatePackage $id) {
+            $null = $Script:Rows.Remove($row)
+            Add-LogLine "'$display' is $id, which is already in the list" 'Detail'
+            Update-PackageList
+            return
+        }
+
+        $row.Name      = $id
+        $row.Source    = if ($source -eq 'winget') { 'winget' } else { 'chocolatey' }
+        $row.Latest    = $version
+        $row.Resolving = $false
+        Update-RowMapping $row
+        $row.Config = $row.HasMapping
+        $row.Sync()
+        Add-LogLine "Added $id via $source (from '$display')" 'Info'
+        Update-PackageList
+    } -OnComplete {
+        param($Output)
+
+        Export-Catalog
+        $Script:Ui.Progress.IsIndeterminate = $false
+        $Script:Ui.Progress.Value = 0
+        $Script:Ui.ProgressText.Text = ''
+
+        # Anything still marked Resolving never got an answer (the job was torn down)
+        foreach ($row in @($Script:Rows | Where-Object { $_.Resolving })) {
+            $null = $Script:Rows.Remove($row)
+            Add-LogLine "Gave up looking up '$($row.Name)' - it was not added." 'Warning'
+        }
+
+        Set-Dirty
+        Update-PackageList
+        Set-Status 'Finished checking the packages that were added' '#1F7A3D'
     }
 }
 
@@ -3136,6 +3525,11 @@ function Save-PackageList {
     $lines = [System.Collections.Generic.List[string]]::new()
     $written = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
+    # A row still being looked up carries a Windows display name, not a package id - writing it
+    # would put a line in packages.txt that no repository can install.
+    $unresolved = @($Script:Rows | Where-Object { $_.Resolving })
+    $rows = @($Script:Rows | Where-Object { -not $_.Resolving })
+
     foreach ($line in $Script:OriginalLines) {
         $trimmed = $line.Trim()
         if ($trimmed -eq '' -or $trimmed.StartsWith('#')) {
@@ -3143,13 +3537,13 @@ function Save-PackageList {
             continue
         }
         $name = (ConvertFrom-PackageLine $trimmed).Name
-        $row = $Script:Rows | Where-Object { $_.Name -ieq $name } | Select-Object -First 1
+        $row = $rows | Where-Object { $_.Name -ieq $name } | Select-Object -First 1
         if ($row -and $written.Add($row.Name)) {
             $lines.Add((ConvertTo-PackageLine $row))
         }
         # Rows removed in the GUI drop their line here
     }
-    foreach ($row in $Script:Rows) {
+    foreach ($row in $rows) {
         if ($written.Add($row.Name)) {
             $lines.Add((ConvertTo-PackageLine $row))
         }
@@ -3158,9 +3552,12 @@ function Save-PackageList {
     try {
         Set-Content -Path $Script:PackagesFile -Value $lines
         $Script:OriginalLines = @($lines)
-        $Script:Dirty = $false
+        $Script:Dirty = $unresolved.Count -gt 0
         Set-Status 'Saved packages.txt' '#1F7A3D'
-        Add-LogLine "Saved package list ($($Script:Rows.Count) packages) to packages.txt" 'Detail'
+        Add-LogLine "Saved package list ($($rows.Count) packages) to packages.txt" 'Detail'
+        if ($unresolved.Count -gt 0) {
+            Add-LogLine "$($unresolved.Count) package(s) are still being checked and were not saved yet." 'Warning'
+        }
         return $true
     }
     catch {
@@ -3237,6 +3634,15 @@ function Start-EngineRun {
     if ($Script:Rows.Count -eq 0) {
         $null = [System.Windows.MessageBox]::Show($Script:Window,
             'There are no packages in the list.', 'Software Manager', 'OK', 'Information')
+        return
+    }
+
+    # A row still being looked up has a display name where its package id belongs
+    $unresolved = @($Script:Rows | Where-Object { $_.Resolving })
+    if ($unresolved.Count -gt 0) {
+        $null = [System.Windows.MessageBox]::Show($Script:Window,
+            "$($unresolved.Count) package(s) are still being matched to Chocolatey or winget. Wait for that to finish, or remove them from the list.",
+            'Software Manager', 'OK', 'Information')
         return
     }
 
@@ -3358,6 +3764,18 @@ $Script:Ui.PkgList.AddHandler(
         if ($row -isnot [PackageRow]) { return }
 
         if ($src -is [System.Windows.Controls.Button]) {
+            # A row whose package id is still being looked up has nothing to change yet - only
+            # removing it makes sense
+            if ($row.Resolving -and $src.Tag -ne 'remove') {
+                Set-Status "Still checking '$($row.Name)' - give it a moment" '#8A6100'
+                return
+            }
+            # A custom-installer row with no link yet: the source and version cells both lead to
+            # the URL editor, which is the one thing left to do for it.
+            if ($row.NeedsUrl -and $src.Tag -in 'source', 'version') {
+                Invoke-RowAction -Action 'url' -Row $row
+                return
+            }
             switch ($src.Tag) {
                 'source'  { Show-SourceMenu -Target $src -Row $row }
                 'version' { Show-VersionDialog -Row $row }
@@ -3387,6 +3805,9 @@ $Script:Ui.SaveBtn.Add_Click({ $null = Save-PackageList })
 $Script:Ui.BackupBtn.Add_Click({ Start-EngineRun -Mode 'Backup' })
 $Script:Ui.InstallBtn.Add_Click({ Start-EngineRun -Mode 'Install' })
 
+$Script:Ui.CopyLogBtn.Add_Click({ Copy-LogToClipboard })
+$Script:Ui.ClearLogBtn.Add_Click({ Clear-LogPane })
+
 $Script:Window.Add_Closing({
     param($s, $e)
     if ($Script:Running) {
@@ -3404,6 +3825,9 @@ $Script:Window.Add_Closing({
         if ($answer -eq 'Cancel') { $e.Cancel = $true }
         elseif ($answer -eq 'Yes' -and -not (Save-PackageList)) { $e.Cancel = $true }
     }
+    # A background lookup running as the window closes has cached ids in memory whose
+    # Export-Catalog (in its OnComplete) will never fire - persist them now as a backstop.
+    if (-not $e.Cancel) { Export-Catalog }
 })
 
 # --- Initial state ---

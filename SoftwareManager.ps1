@@ -377,15 +377,30 @@ function Get-PackageSpec {
     }
 }
 
-# The InstallUrl of a package's mapping, or '' when it has none.
+# The URL a package's mapping installs from, or '' when it has none.
+#
+# A mapping may list one installer per version under 'InstallUrls' - a URL-installed app is
+# invisible to both repositories, so pinning it to a version means naming its installer. When
+# the line carries no '@version' (or that version has no entry), 'InstallUrl' is used.
 function Get-PackageInstallUrl {
     param(
         [Parameter(Mandatory=$true)]
-        [string]$PackageName
+        [string]$PackageName,
+
+        [string]$Version = ''
     )
 
     if (-not $Script:ConfigMappings.ContainsKey($PackageName)) { return '' }
     $mapping = $Script:ConfigMappings[$PackageName]
+
+    if ($Version -and $mapping.ContainsKey('InstallUrls') -and $mapping['InstallUrls']) {
+        foreach ($key in $mapping['InstallUrls'].Keys) {
+            if ([string]$key -eq $Version -and -not [string]::IsNullOrWhiteSpace($mapping['InstallUrls'][$key])) {
+                return [string]$mapping['InstallUrls'][$key]
+            }
+        }
+    }
+
     if (-not $mapping.ContainsKey('InstallUrl')) { return '' }
     if ([string]::IsNullOrWhiteSpace($mapping['InstallUrl'])) { return '' }
     return [string]$mapping['InstallUrl']
@@ -931,7 +946,7 @@ function Start-InstallMode {
     # A 'chocolatey' package still skips Chocolatey when its mapping installs it from a URL,
     # and a 'url:' package needs Chocolatey only if its URL is a feed rather than an installer.
     $needsChocolatey = @($specs | Where-Object {
-        $url = Get-PackageInstallUrl -PackageName $_.Name
+        $url = Get-PackageInstallUrl -PackageName $_.Name -Version $_.Version
         if ($url) { -not (Test-InstallerUrl -Url $url) } else { $_.Source -eq 'chocolatey' }
     }).Count -gt 0
     $needsWinget = @($specs | Where-Object { $_.Source -eq 'winget' }).Count -gt 0
@@ -984,11 +999,12 @@ function Start-InstallMode {
         # Install package if not already installed
         if (-not (Test-PackageInstalled -PackageName $packageName -Source $spec.Source)) {
             $installSuccess = $false
-            $customUrl = Get-PackageInstallUrl -PackageName $packageName
+            $customUrl = Get-PackageInstallUrl -PackageName $packageName -Version $spec.Version
 
             # A mapping with an InstallUrl wins over the source: it is the escape hatch for
             # apps neither repository carries.
             if ($customUrl) {
+                if ($spec.Version) { Write-Log "$packageName pinned to $($spec.Version): installing from $customUrl" }
                 $installSuccess = Install-PackageFromUrl -PackageName $packageName -Url $customUrl
             }
             elseif ($spec.Source -eq 'url') {

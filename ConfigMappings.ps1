@@ -11,6 +11,7 @@
 #     'Files'       = @()   # Specific configuration files
 #     'Registry'    = @()   # Registry keys (full HKEY_ paths, not HKCU:)
 #     'InstallUrl'  = ''    # Optional: install from this URL instead of Chocolatey/winget
+#     'InstallUrls' = [ordered]@{}  # Optional: one installer URL per version, newest first
 #     'DisplayName' = ''    # Optional: the name the app registers in Add/Remove Programs
 # }
 #
@@ -23,6 +24,15 @@
 # InstallUrl: use it for apps neither Chocolatey nor winget carries. A link straight to an
 # .exe or .msi is downloaded and run silently (.msi goes through msiexec /qn); anything else
 # is treated as a Chocolatey source feed. Pair it with a 'url:' line in packages.txt.
+#
+# InstallUrls: a URL-installed app has no repository to list its versions, so pinning one
+# means naming its installer. Give a URL per version here and 'app@1.2.3' in packages.txt
+# installs that one; InstallUrl stays the fallback for a line with no version pin.
+#
+#     'InstallUrls' = [ordered]@{
+#         '1.19.0' = "https://example.com/app-1.19.0.exe"
+#         '1.18.4' = "https://example.com/app-1.18.4.exe"
+#     }
 #
 # DisplayName: only matters alongside InstallUrl. A URL-installed app is invisible to
 # Chocolatey, so this is how Software Manager tells whether it is already installed - copy
@@ -131,7 +141,10 @@ $ConfigMappings = @{
         'Files' = @()
         'Registry' = @()
         'InstallUrl' = "https://drive.switch.ch/index.php/s/EIVup04qkSHb54j/download?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fnormal&files=noScribe_setup_0_7_2%20normal.exe"
-        'DisplayName' = "noscribe 7.2"
+        'InstallUrls' = [ordered]@{
+            '0.7.2' = "https://drive.switch.ch/index.php/s/EIVup04qkSHb54j/download?path=%2FnoScribe%20vers.%200.7%2FWindows%2Fnormal&files=noScribe_setup_0_7_2%20normal.exe"
+        }
+        'DisplayName' = "noScribe"
     }
 }
 
