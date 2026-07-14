@@ -102,10 +102,10 @@ The GUI self-elevates (UAC prompt). Every package in the list gets installed —
 - **Actions** (`⋯`) — more info, edit config, open `ConfigMappings.ps1`, change source, set version, remove
 - **Search or add a package** — the id is verified before it is added (Chocolatey first, then winget). If it does not exist, you get a list of the closest matches to pick from rather than an error — and if nothing matches at all, the option to install it from a link instead.
 - **Add from URL...** — for apps neither repository carries: give it a name and a link to its `.exe`/`.msi`, and it is installed from there (an `.msi` runs through `msiexec /qn`). This writes the `InstallUrl` into `ConfigMappings.ps1` for you.
-- **Browse installed...** — lists software already installed on this PC (Chocolatey packages and Windows' Add/Remove Programs, minus Windows updates and other non-applications) and matches each one to a package id in the background, so you can see *before* you tick anything which apps can actually be installed. Ones that neither repository carries are greyed out and say so — select them anyway and you are offered the URL route rather than losing them. Results are cached in `catalog.json` with a "last synced" time: the first scan takes a while, later ones are instant. **Rescan PC** re-reads the machine; **Recheck all** throws the cache away and looks everything up again.
+- **Browse installed...** — lists software already installed on this PC (Chocolatey packages and Windows' Add/Remove Programs, minus Windows updates and other non-applications) and matches each one to a package id in the background, so you can see *before* you tick anything which apps can actually be installed. You don't have to wait for the whole scan to finish: tick the ones you want and hit **Add selected** any time — they're added immediately (still being checked, if their match hasn't come back yet) and the rest of the lookup continues quietly afterward. A program neither repository carries is added straight to the list too, as a custom-installer row flagged **needs URL** — click its source or version cell to fill in the download link, no popup involved. Results (including the scan itself) are cached in `catalog.json`, so the first scan takes a while and every later one — even after restarting the GUI — is instant. **Rescan PC** re-reads the machine; **Recheck all** throws the resolved ids away and looks everything up again.
 - **Edit config** — say where an app keeps its settings (files, folders, registry keys) without leaving the GUI. It rewrites just that entry in `ConfigMappings.ps1`, leaving your comments and other entries alone, and stores paths as `$env:APPDATA\...` so they still work under a different username.
 - **Save list** — rewrites `packages.txt`, preserving your comments
-- Live log, progress bar, and confirmation dialogs before anything is changed
+- Live log with timestamps, a copy-to-clipboard button and a clear button (clearing only empties the pane — `install-log.txt` keeps everything), progress bar, and confirmation dialogs before anything is changed
 
 Packages without config paths in `ConfigMappings.ps1` show a "no config mapping" badge — checking Config for them backs up nothing until you add one (use **Edit config**). In the GUI, missing config backups during Install are logged as warnings instead of prompting (same as `-Force`).
 
@@ -201,7 +201,7 @@ The script handles different types of configuration storage:
 - `configs/` - Directory containing individual package configurations
 - `configs.zip` - Compressed archive of all configurations
 - `install-log.txt` - Detailed log of all operations with timestamps
-- `catalog.json` - The GUI's cache of resolved package ids, versions and last-synced times. Safe to delete; it rebuilds itself (the next scan is just slower).
+- `catalog.json` - The GUI's cache: resolved package ids, versions, and the last "Browse installed" machine scan itself (so a relaunch doesn't need to re-scan or re-resolve). Safe to delete; it rebuilds itself (the next scan is just slower).
 
 ## Required Files
 
@@ -304,6 +304,24 @@ and mark its line in `packages.txt` with the `url:` prefix (`url:balenaetcher`, 
 3. Without an `InstallUrl`, the package comes from Chocolatey or winget as usual
 
 **`DisplayName`** is worth setting on a URL-installed app: it is the name the app registers in Windows' **Apps & features**, and the only way Software Manager can tell it is already installed. Without it, the installer runs again on every Install.
+
+**Pinning a version** of a URL-installed app means naming its installer, since no repository lists its versions for you. Add an optional `InstallUrls` map, one link per version:
+
+```powershell
+'balenaetcher' = @{
+    'Folders'     = @()
+    'Files'       = @()
+    'Registry'    = @()
+    'InstallUrl'  = 'https://github.com/balena-io/etcher/releases/download/v1.19.25/balenaEtcher.Setup.exe'
+    'InstallUrls' = [ordered]@{
+        '1.19.25' = 'https://github.com/balena-io/etcher/releases/download/v1.19.25/balenaEtcher.Setup.exe'
+        '1.18.11' = 'https://github.com/balena-io/etcher/releases/download/v1.18.11/balenaEtcher.Setup.exe'
+    }
+    'DisplayName' = 'balenaEtcher'
+}
+```
+
+`app@1.18.11` in `packages.txt` then installs that version's link; without a pin, `InstallUrl` is used. In the GUI's **Add from URL...** dialog you can leave the plain "Installer URL" box empty if you fill in the version list — the newest entry is used as the fallback automatically. The version picker (click a `url:` row's version cell) lists whatever versions are defined here.
 
 **Important**: 
 - Only specify actual configuration files and registry keys that contain user settings
