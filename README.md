@@ -4,16 +4,19 @@ A PowerShell script that automates backup and restore of applications and their 
 
 ## Features
 
+- **Graphical Interface**: `SoftwareManagerGUI.ps1` is the main way to use this — search and add packages, browse what is already installed, edit each app's config mapping, pin versions, switch install source, and run either mode with a live log and progress bar
 - **Backup Mode**: Export application configurations from your current PC
 - **Install + Restore Mode**: Install packages on a new PC and restore configurations
-- **Automatic Config Detection**: Detects common configuration locations for popular applications
+- **Three install sources**: Chocolatey, winget, or a direct MSI/EXE link for apps neither repository carries
+- **Manifest-Based Restore**: Each backup records where every item came from, so restore puts files back exactly — even on a fresh machine with a different username
 - **Registry Support**: Backs up and restores registry-based configurations
 - **Comprehensive Logging**: All operations are logged with timestamps
 - **Error Handling**: Graceful handling of missing configs and installation failures
+- **Unattended Mode**: `-Force` skips confirmation prompts for automated runs
 
 ## Requirements
 
-- Windows PowerShell 7 or later
+- PowerShell 7 or later (the script enforces this via `#Requires -Version 7.0`; use `InstallAndLaunchPowerShell.cmd` to install it)
 - Administrator privileges (required)
 - Internet connection (for Chocolatey installation and package downloads)
 
@@ -43,7 +46,30 @@ vlc
 +git
 +discord
 +steam
+
+# Apps Chocolatey does not carry: install through winget instead
+winget:Balena.Etcher
++winget:Microsoft.PowerToys
+
+# Apps neither carries: install from an MSI/EXE link (set InstallUrl in ConfigMappings.ps1)
+url:mycorpvpn
++url:mycorptool
+
+# Pin a version instead of installing the latest
+notepadplusplus@8.6.9
 ```
+
+Each line is `[+][winget:|url:]<package-id>[@<version>]`:
+
+| Part | Meaning |
+| --- | --- |
+| *(no prefix)* | Install from Chocolatey (`choco:` says the same thing explicitly) |
+| `winget:` | Install with winget; the id is then a winget id, e.g. `Balena.Etcher` |
+| `url:` | Download and run the installer at the package's `InstallUrl` in `ConfigMappings.ps1` |
+| `+` | Back up and restore this package's configuration (works with any source) |
+| `@1.2.3` | Install exactly this version instead of the latest |
+
+You do not have to write any of this by hand — the GUI does it for you.
 
 ## Usage
 
@@ -59,6 +85,33 @@ This batch script will:
 1. Automatically install PowerShell 7.5.1 using Windows Package Manager (winget)
 2. Launch the SoftwareManager.ps1 script in PowerShell 7 with Administrator privileges
 3. Bypass execution policy restrictions automatically
+
+### GUI Mode
+
+```cmd
+SoftwareManagerGUI.cmd
+```
+
+(or `pwsh -ExecutionPolicy Bypass -File "SoftwareManagerGUI.ps1"` — the `.cmd` launcher just avoids a stray console window)
+
+The GUI self-elevates (UAC prompt). Every package in the list gets installed — the list *is* the selection, so there is no "install" checkbox. Each row shows its source, its version, and whether its config is backed up:
+
+- **Config checkbox** — back up and restore this package's configuration (this is the `+` prefix in `packages.txt`)
+- **Source** — click it to switch between **Chocolatey**, **winget** and **custom URL**. The two repositories name the same app differently, so switching also swaps the id (`putty` ↔ `PuTTY.PuTTY`); a source is only offered once it is confirmed to carry the app.
+- **Version** — click it to pin a specific version, or go back to "Latest (no pin)"
+- **Actions** (`⋯`) — more info, edit config, open `ConfigMappings.ps1`, change source, set version, remove
+- **Search or add a package** — the id is verified before it is added (Chocolatey first, then winget). If it does not exist, you get a list of the closest matches to pick from rather than an error — and if nothing matches at all, the option to install it from a link instead.
+- **Add from URL...** — for apps neither repository carries: give it a name and a link to its `.exe`/`.msi`, and it is installed from there (an `.msi` runs through `msiexec /qn`). This writes the `InstallUrl` into `ConfigMappings.ps1` for you.
+- **Browse installed...** — lists software already installed on this PC (Chocolatey packages and Windows' Add/Remove Programs, minus Windows updates and other non-applications) and matches each one to a package id in the background, so you can see *before* you tick anything which apps can actually be installed. Ones that neither repository carries are greyed out and say so — select them anyway and you are offered the URL route rather than losing them. Results are cached in `catalog.json` with a "last synced" time: the first scan takes a while, later ones are instant. **Rescan PC** re-reads the machine; **Recheck all** throws the cache away and looks everything up again.
+- **Edit config** — say where an app keeps its settings (files, folders, registry keys) without leaving the GUI. It rewrites just that entry in `ConfigMappings.ps1`, leaving your comments and other entries alone, and stores paths as `$env:APPDATA\...` so they still work under a different username.
+- **Save list** — rewrites `packages.txt`, preserving your comments
+- Live log, progress bar, and confirmation dialogs before anything is changed
+
+Packages without config paths in `ConfigMappings.ps1` show a "no config mapping" badge — checking Config for them backs up nothing until you add one (use **Edit config**). In the GUI, missing config backups during Install are logged as warnings instead of prompting (same as `-Force`).
+
+If Chocolatey is missing, the GUI says so in a banner with an **Install Chocolatey** button, and offers to install it at the moment you try to do something that needs it. The action you were doing resumes once the install finishes.
+
+**A note on typos**: neither Chocolatey nor winget tolerates a misspelled id — `winget search chorme` finds nothing at all, in either. So if a search comes back empty, the spelling is worth a second look; the GUI will also offer to add the app from a URL instead.
 
 ### Interactive Mode
 
@@ -88,7 +141,12 @@ PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Backup
 ```powershell
 .\SoftwareManager.ps1 -Mode Install
 # or
-PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Install
+pwsh -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Install
+```
+
+**Unattended install** (no prompt when a package's config backup is missing):
+```powershell
+.\SoftwareManager.ps1 -Mode Install -Force
 ```
 
 ## How It Works
@@ -99,6 +157,7 @@ PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Install
 2. For each marked package:
    - Detects configuration locations (AppData, ProgramData, Registry)
    - Copies configurations to `.\configs\<package>\`
+   - Writes a `manifest.json` recording each item's original location (with environment-variable tokens like `%APPDATA%` so paths work across different usernames)
 3. Creates `configs.zip` containing all backed up configurations
 4. Logs all operations to `install-log.txt`
 
@@ -108,10 +167,12 @@ PowerShell -ExecutionPolicy Bypass -File "SoftwareManager.ps1" -Mode Install
 2. Reads `packages.txt` and installs all packages via Chocolatey
 3. For packages marked with "+":
    - Looks for configurations in `.\configs\<package>\` or extracts from `configs.zip`
-   - Restores configurations to their original locations
-   - Prompts user if configurations are missing
+   - Reads the backup's `manifest.json` and restores each item to its exact original location
+   - Prompts user if configurations are missing (skipped with `-Force`)
 4. Handles already-installed packages gracefully
 5. Logs all operations to `install-log.txt`
+
+**Note**: Backups created by versions before 2.0 have no `manifest.json` and cannot be restored — re-run Backup mode on the source PC with the current script.
 
 ## Supported Applications
 
@@ -140,12 +201,15 @@ The script handles different types of configuration storage:
 - `configs/` - Directory containing individual package configurations
 - `configs.zip` - Compressed archive of all configurations
 - `install-log.txt` - Detailed log of all operations with timestamps
+- `catalog.json` - The GUI's cache of resolved package ids, versions and last-synced times. Safe to delete; it rebuilds itself (the next scan is just slower).
 
 ## Required Files
 
 - `SoftwareManager.ps1` - Main PowerShell script
 - `packages.txt` - List of packages to install/backup
 - `ConfigMappings.ps1` - Application configuration location mappings
+- `SoftwareManagerGUI.ps1` - (Optional) graphical front end for the script above
+- `SoftwareManagerGUI.cmd` - (Optional) launcher for the GUI, without a console window
 - `InstallAndLaunchPowerShell.cmd` - (Optional) PowerShell 7 installer and script launcher
 
 ## Exit Codes
@@ -197,7 +261,7 @@ The script handles different types of configuration storage:
 - Ensure all three files are in the same directory as the script
 
 **Missing configurations for some packages**
-- The script will prompt you to continue or abort
+- The script will prompt you to continue or abort (pass `-Force` to continue automatically)
 - You can manually add configurations later and re-run the script
 
 ### Adding Custom Applications
@@ -220,30 +284,33 @@ To add support for additional applications, edit the `ConfigMappings.ps1` file. 
 
 ### Custom Installation URLs
 
-For packages not available in the Chocolatey repository, you can specify a custom download URL:
+For apps neither Chocolatey nor winget carries, give the package an `InstallUrl` — easiest through **Add from URL...** in the GUI, which writes this for you:
 
 ```powershell
-'discord' = @{
-    'Folders' = @()
-    'Files' = @(
-        "$env:APPDATA\discord\settings.json"
-    )
-    'Registry' = @()
-    'InstallUrl' = 'https://discord.com/api/downloads/distributions/app/installers/latest?channel=stable&platform=win&arch=x64'
+'balenaetcher' = @{
+    'Folders'     = @()
+    'Files'       = @()
+    'Registry'    = @()
+    'InstallUrl'  = 'https://github.com/balena-io/etcher/releases/download/v1.19.25/balenaEtcher.Setup.exe'
+    'DisplayName' = 'balenaEtcher'
 }
 ```
 
+and mark its line in `packages.txt` with the `url:` prefix (`url:balenaetcher`, or `+url:balenaetcher` to keep its config too).
+
 **Installation Methods**:
-1. First attempts to use Chocolatey with the custom URL as source
-2. If that fails, downloads the file directly and runs silent installation
-3. Falls back to standard Chocolatey installation if no URL specified
+1. A link ending in `.exe` or `.msi` is downloaded and run silently — an `.msi` through `msiexec /i /qn /norestart`, an `.exe` with the usual silent flags
+2. Any other URL is treated as a Chocolatey source feed, falling back to a direct download
+3. Without an `InstallUrl`, the package comes from Chocolatey or winget as usual
+
+**`DisplayName`** is worth setting on a URL-installed app: it is the name the app registers in Windows' **Apps & features**, and the only way Software Manager can tell it is already installed. Without it, the installer runs again on every Install.
 
 **Important**: 
 - Only specify actual configuration files and registry keys that contain user settings
 - Use full `HKEY_CURRENT_USER` or `HKEY_LOCAL_MACHINE` paths for registry keys
-- Custom URLs should point to installer files (typically .exe or .msi)
+- Write paths with `$env:` variables, never a hardcoded `C:\Users\<you>` — that is what lets a backup restore under a different username
 - The configuration file includes commented examples for common applications
-- Restart the script after modifying `ConfigMappings.ps1`
+- The GUI rewrites single entries in place and leaves your comments alone; restart the CLI after editing `ConfigMappings.ps1` by hand
 
 ## Security Notes
 
